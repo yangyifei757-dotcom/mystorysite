@@ -3,28 +3,37 @@
 import { useState } from 'react'
 
 export default function AddNovelPage() {
-  const [form, setForm] = useState({
-    title: '',
-    author: '',
-    description: '',
-    coverUrl: '',
-    tags: '',
-    content: '',
-    splitBy: 'Chapter',
-    secret: ''
-  })
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [tags, setTags] = useState('')
+  const [payAfterChapter, setPayAfterChapter] = useState('3')
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [content, setContent] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!coverFile) {
+      setMessage('Please select a cover image.')
+      return
+    }
     setLoading(true)
     setMessage('')
 
+    const formData = new FormData()
+    formData.append('title', title)
+    formData.append('description', description)
+    formData.append('tags', tags)
+    formData.append('payAfterChapter', payAfterChapter)
+    formData.append('content', content)
+    formData.append('password', password)
+    formData.append('cover', coverFile)
+
     const res = await fetch('/api/add-novel', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
+      body: formData,
     })
     const data = await res.json()
     setMessage(data.message || data.error || 'Done')
@@ -33,72 +42,78 @@ export default function AddNovelPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-8 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-serif text-primary mb-8">Add Novel (One Click)</h1>
+      <h1 className="text-3xl font-serif text-primary mb-8">Upload a Novel</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
-          placeholder="Title"
-          value={form.title}
-          onChange={e => setForm({...form, title: e.target.value})}
-          className="w-full p-3 rounded bg-card border border-border"
-          required
-        />
-        <input
-          placeholder="Author"
-          value={form.author}
-          onChange={e => setForm({...form, author: e.target.value})}
+          placeholder="Title *"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
           className="w-full p-3 rounded bg-card border border-border"
           required
         />
         <textarea
           placeholder="Description"
-          value={form.description}
-          onChange={e => setForm({...form, description: e.target.value})}
+          value={description}
+          onChange={e => setDescription(e.target.value)}
           className="w-full p-3 rounded bg-card border border-border"
           rows={3}
         />
         <input
-          placeholder="Cover Image URL (https://...)"
-          value={form.coverUrl}
-          onChange={e => setForm({...form, coverUrl: e.target.value})}
-          className="w-full p-3 rounded bg-card border border-border"
-        />
-        <input
           placeholder="Tags (comma separated, e.g. fantasy,romance)"
-          value={form.tags}
-          onChange={e => setForm({...form, tags: e.target.value})}
+          value={tags}
+          onChange={e => setTags(e.target.value)}
           className="w-full p-3 rounded bg-card border border-border"
         />
         <div>
+          <label className="block text-sm mb-1">Cover Image (upload file) *</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => setCoverFile(e.target.files?.[0] || null)}
+            className="w-full p-3 rounded bg-card border border-border"
+            required
+          />
+        </div>
+        <div>
           <label className="block text-sm mb-1">Full Novel Text</label>
           <textarea
-            placeholder="Paste the entire book content here. Chapters will be split automatically."
-            value={form.content}
-            onChange={e => setForm({...form, content: e.target.value})}
+            placeholder="Paste the entire book content. Chapters will be split by lines starting with 'Chapter X'"
+            value={content}
+            onChange={e => setContent(e.target.value)}
             className="w-full p-3 rounded bg-card border border-border font-mono text-sm"
             rows={20}
             required
           />
         </div>
-        <input
-          placeholder="Split chapters by keyword (e.g. Chapter, CHAPTER, 第)"
-          value={form.splitBy}
-          onChange={e => setForm({...form, splitBy: e.target.value})}
-          className="w-full p-3 rounded bg-card border border-border"
-        />
-        <input
-          type="password"
-          placeholder="Admin Secret (set in Vercel env)"
-          value={form.secret}
-          onChange={e => setForm({...form, secret: e.target.value})}
-          className="w-full p-3 rounded bg-card border border-border"
-          required
-        />
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-sm mb-1">Paywall starts after chapter #</label>
+            <input
+              type="number"
+              value={payAfterChapter}
+              onChange={e => setPayAfterChapter(e.target.value)}
+              className="w-full p-3 rounded bg-card border border-border"
+              min="0"
+            />
+            <p className="text-xs text-foreground/50 mt-1">Enter 0 to lock all chapters, 3 to lock from chapter 4 onwards.</p>
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm mb-1">Upload Password *</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full p-3 rounded bg-card border border-border"
+              required
+            />
+          </div>
+        </div>
         <button
           type="submit"
           disabled={loading}
           className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:bg-primary/90 disabled:opacity-50"
         >
-          {loading ? 'Adding...' : 'Add Novel Now'}
+          {loading ? 'Uploading...' : 'Upload Novel'}
         </button>
       </form>
       {message && (
