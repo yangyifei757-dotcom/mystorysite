@@ -2,8 +2,16 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 
 export default async function Home() {
-  // 从 Supabase 获取前6本小说
-  const { data: novels } = await supabase.from('novels').select('*').limit(6)
+  let novels: any[] = []
+  let error = null
+
+  try {
+    const { data, error: dbError } = await supabase.from('novels').select('*').limit(6)
+    novels = data || []
+    error = dbError
+  } catch (e) {
+    error = e
+  }
 
   return (
     <main className="min-h-screen bg-background">
@@ -27,21 +35,33 @@ export default async function Home() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {novels?.map((novel: any) => (
-              <Link key={novel.id} href={`/novel/${novel.id}`} className="group">
-                <div className="relative overflow-hidden rounded-2xl bg-card hover:ring-2 hover:ring-primary/30 transition-all duration-300 shadow-lg">
-                  <div className="aspect-[3/4] bg-gradient-to-b from-primary/10 to-card">
-                    {novel.cover_url && (
-                      <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    )}
+            {novels.length === 0 ? (
+              <p className="text-foreground/40 text-center col-span-full">No novels available yet. Check back soon!</p>
+            ) : (
+              novels.map((novel: any) => (
+                <Link key={novel.id} href={`/novel/${novel.id}`} className="group">
+                  <div className="relative overflow-hidden rounded-2xl bg-card hover:ring-2 hover:ring-primary/30 transition-all duration-300 shadow-lg">
+                    <div className="aspect-[3/4] bg-gradient-to-b from-primary/10 to-card">
+                      {novel.cover_url ? (
+                        <img
+                          src={novel.cover_url}
+                          alt={novel.title}
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-foreground/20 text-6xl font-serif">
+                          {novel.title?.charAt(0) || '?'}
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/80 to-transparent">
+                      <h3 className="font-serif text-2xl text-white mb-1">{novel.title}</h3>
+                      <p className="text-sm text-gray-300">by {novel.author}</p>
+                    </div>
                   </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/80 to-transparent">
-                    <h3 className="font-serif text-2xl text-white mb-1">{novel.title}</h3>
-                    <p className="text-sm text-gray-300">by {novel.author}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </section>
