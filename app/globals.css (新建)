@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 255 2% 5%;   /* #0B0A0F 近似 */
+    --foreground: 42 20% 90%;
+    --border: 255 2% 15%;
+  }
+}
