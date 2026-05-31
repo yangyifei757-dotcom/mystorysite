@@ -30,7 +30,7 @@ export default function ManageNovels() {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-8 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-serif text-primary mb-8">📋 Manage Novels</h1>
+      <h1 className="text-3xl font-serif text-primary mb-8">NovelCrush - 📋 Manage Novels</h1>
       <div className="space-y-4">
         {novels.map((novel: any) => (
           <div key={novel.id} className="flex items-center justify-between p-4 rounded-xl bg-card border border-border">
