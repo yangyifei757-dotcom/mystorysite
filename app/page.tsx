@@ -10,7 +10,7 @@ export default async function Home() {
       .from('novels')
       .select('*')
       .eq('status', 'published')
-      .order('created_at', { ascending: false }) // 最新的在前
+      .order('created_at', { ascending: false })
     novels = data || []
     error = dbError
   } catch (e) {
@@ -21,7 +21,8 @@ export default async function Home() {
     <main className="min-h-screen bg-background">
       <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-serif text-primary tracking-wide">Whisper Tales</h1>
+          {/* ✅ 改这里 */}
+          <h1 className="text-2xl font-serif text-primary tracking-wide">NovelCrush</h1>
           <nav className="flex gap-4 text-sm text-foreground/80">
             <Link href="/pricing" className="hover:text-primary transition">Pricing</Link>
             <Link href="/login" className="hover:text-primary transition">Sign In</Link>
@@ -45,21 +46,15 @@ export default async function Home() {
               novels.map((novel: any) => (
                 <Link key={novel.id} href={`/novel/${novel.id}`} className="group">
                   <div className="rounded-2xl bg-card hover:ring-2 hover:ring-primary/30 transition-all duration-300 shadow-lg overflow-hidden">
-                    {/* 封面区（不压文字） */}
                     <div className="aspect-[3/4] bg-gradient-to-b from-primary/10 to-card">
                       {novel.cover_url ? (
-                        <img
-                          src={novel.cover_url}
-                          alt={novel.title}
-                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+                        <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-foreground/20 text-6xl font-serif">
                           {novel.title?.charAt(0) || '?'}
                         </div>
                       )}
                     </div>
-                    {/* 文字信息移到封面下方 */}
                     <div className="p-4">
                       <h3 className="font-serif text-xl text-white mb-1 line-clamp-1">{novel.title}</h3>
                       <p className="text-sm text-gray-400">by {novel.author}</p>
