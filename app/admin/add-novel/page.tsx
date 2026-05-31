@@ -3,46 +3,52 @@
 import { useState } from 'react'
 
 export default function AddNovelPage() {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [tags, setTags] = useState('')
-  const [payAfterChapter, setPayAfterChapter] = useState('3')
-  const [coverFile, setCoverFile] = useState<File | null>(null)
-  const [content, setContent] = useState('')
-  const [password, setPassword] = useState('')
+  const [form, setForm] = useState({
+    title: '',
+    author: '',
+    description: '',
+    coverUrl: '',
+    tags: '',
+    content: '',
+    payAfterChapter: '3',
+    password: '',
+  })
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [debug, setDebug] = useState('')
+  const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setMessage('')
-    setDebug('Sending request...')
-
-    const formData = new FormData()
-    formData.append('title', title)
-    formData.append('description', description)
-    formData.append('tags', tags)
-    formData.append('payAfterChapter', payAfterChapter)
-    formData.append('content', content)
-    formData.append('password', password)
-    if (coverFile) {
-      formData.append('cover', coverFile)
-    }
+    setResult(null)
 
     try {
       const res = await fetch('/api/add-novel', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: form.title,
+          author: form.author,
+          description: form.description,
+          coverUrl: form.coverUrl,
+          tags: form.tags,
+          content: form.content,
+          payAfterChapter: parseInt(form.payAfterChapter) || 3,
+          password: form.password,
+        }),
       })
-      setDebug('Got response, parsing...')
+
       const data = await res.json()
-      setDebug('Done. Status: ' + res.status)
-      setMessage(data.step || data.message || data.error || 'Unknown response')
+      if (res.ok && data.message) {
+        setResult({ type: 'success', text: data.message })
+      } else {
+        setResult({ type: 'error', text: data.error || 'Unknown error' })
+      }
     } catch (err: any) {
-      setDebug('Fetch error: ' + err.message)
-      setMessage('Network error. Check console.')
+      setResult({ type: 'error', text: 'Network error: ' + err.message })
     } finally {
       setLoading(false)
     }
@@ -50,35 +56,37 @@ export default function AddNovelPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-8 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-serif text-primary mb-8">Upload a Novel (Debug Mode)</h1>
+      <h1 className="text-3xl font-serif text-primary mb-8">📖 Upload a Novel</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input placeholder="Title *" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-3 rounded bg-card border border-border" required />
-        <textarea placeholder="Description" value={description} onChange={e => setDescription(e.target.value)} className="w-full p-3 rounded bg-card border border-border" rows={3} />
-        <input placeholder="Tags (comma separated)" value={tags} onChange={e => setTags(e.target.value)} className="w-full p-3 rounded bg-card border border-border" />
-        <div>
-          <label className="block text-sm mb-1">Cover Image (optional for now)</label>
-          <input type="file" accept="image/*" onChange={e => setCoverFile(e.target.files?.[0] || null)} className="w-full p-3 rounded bg-card border border-border" />
-        </div>
+        <input name="title" placeholder="Title *" value={form.title} onChange={handleChange} className="w-full p-3 rounded bg-card border border-border" required />
+        <input name="author" placeholder="Author *" value={form.author} onChange={handleChange} className="w-full p-3 rounded bg-card border border-border" required />
+        <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} className="w-full p-3 rounded bg-card border border-border" rows={3} />
+        <input name="coverUrl" placeholder="Cover Image URL (https://...)" value={form.coverUrl} onChange={handleChange} className="w-full p-3 rounded bg-card border border-border" />
+        <input name="tags" placeholder="Tags (comma separated, e.g. fantasy,romance)" value={form.tags} onChange={handleChange} className="w-full p-3 rounded bg-card border border-border" />
         <div>
           <label className="block text-sm mb-1">Full Novel Text *</label>
-          <textarea placeholder="Paste book content with 'Chapter 1' headings" value={content} onChange={e => setContent(e.target.value)} className="w-full p-3 rounded bg-card border border-border font-mono text-sm" rows={20} required />
+          <textarea name="content" placeholder="Paste entire book content. Chapters should start with 'Chapter 1', 'Chapter 2', etc." value={form.content} onChange={handleChange} className="w-full p-3 rounded bg-card border border-border font-mono text-sm" rows={20} required />
         </div>
         <div className="flex gap-4">
           <div className="flex-1">
-            <label className="block text-sm mb-1">Paywall after chapter #</label>
-            <input type="number" value={payAfterChapter} onChange={e => setPayAfterChapter(e.target.value)} className="w-full p-3 rounded bg-card border border-border" min="0" />
+            <label className="block text-sm mb-1">Paywall starts after chapter #</label>
+            <input name="payAfterChapter" type="number" value={form.payAfterChapter} onChange={handleChange} className="w-full p-3 rounded bg-card border border-border" min="0" />
           </div>
           <div className="flex-1">
             <label className="block text-sm mb-1">Upload Password *</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-3 rounded bg-card border border-border" required />
+            <input name="password" type="password" value={form.password} onChange={handleChange} className="w-full p-3 rounded bg-card border border-border" required />
           </div>
         </div>
         <button type="submit" disabled={loading} className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:bg-primary/90 disabled:opacity-50">
           {loading ? 'Uploading...' : 'Upload Novel'}
         </button>
       </form>
-      {debug && <p className="mt-2 text-xs text-foreground/50">Debug: {debug}</p>}
-      {message && <p className="mt-4 text-center text-sm text-primary">{message}</p>}
+
+      {result && (
+        <div className={`mt-6 p-4 rounded-xl text-center ${result.type === 'success' ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
+          {result.text}
+        </div>
+      )}
     </div>
   )
 }
