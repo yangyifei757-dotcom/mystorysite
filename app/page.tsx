@@ -10,7 +10,7 @@ export default async function Home() {
       .from('novels')
       .select('*')
       .eq('status', 'published')
-      .limit(6)
+      .order('created_at', { ascending: false }) // 最新的在前
     novels = data || []
     error = dbError
   } catch (e) {
@@ -44,7 +44,8 @@ export default async function Home() {
             ) : (
               novels.map((novel: any) => (
                 <Link key={novel.id} href={`/novel/${novel.id}`} className="group">
-                  <div className="relative overflow-hidden rounded-2xl bg-card hover:ring-2 hover:ring-primary/30 transition-all duration-300 shadow-lg">
+                  <div className="rounded-2xl bg-card hover:ring-2 hover:ring-primary/30 transition-all duration-300 shadow-lg overflow-hidden">
+                    {/* 封面区（不压文字） */}
                     <div className="aspect-[3/4] bg-gradient-to-b from-primary/10 to-card">
                       {novel.cover_url ? (
                         <img
@@ -58,9 +59,10 @@ export default async function Home() {
                         </div>
                       )}
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/80 to-transparent">
-                      <h3 className="font-serif text-2xl text-white mb-1">{novel.title}</h3>
-                      <p className="text-sm text-gray-300">by {novel.author}</p>
+                    {/* 文字信息移到封面下方 */}
+                    <div className="p-4">
+                      <h3 className="font-serif text-xl text-white mb-1 line-clamp-1">{novel.title}</h3>
+                      <p className="text-sm text-gray-400">by {novel.author}</p>
                     </div>
                   </div>
                 </Link>
