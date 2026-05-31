@@ -6,7 +6,7 @@ export default async function Home() {
   let error = null
 
   try {
-    const { data, error: dbError } = await supabase.from('novels').select('*').limit(6)
+    const { data, error: dbError } = await supabase.from('novels').select('*').eq('is_published', true).limit(6)
     novels = data || []
     error = dbError
   } catch (e) {
