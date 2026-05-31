@@ -1,35 +1,27 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 
-export default function Home() {
-  const [novels, setNovels] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+export default async function Home() {
+  let novels: any[] = []
+  let error = null
 
-  useEffect(() => {
-    async function fetchNovels() {
-      const { data, error } = await supabase
-        .from('novels')
-        .select('*')
-        .limit(12)
-        .order('created_at', { ascending: false })
-      if (!error) {
-        setNovels(data || [])
-      } else {
-        console.error('Failed to fetch novels:', error)
-      }
-      setLoading(false)
-    }
-    fetchNovels()
-  }, [])
+  try {
+    const { data, error: dbError } = await supabase
+      .from('novels')
+      .select('*')
+      .eq('status', 'published')
+      .limit(6)
+    novels = data || []
+    error = dbError
+  } catch (e) {
+    error = e
+  }
 
   return (
     <main className="min-h-screen bg-background">
       <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-serif text-primary tracking-wide">Novelcrush</h1>
+          <h1 className="text-2xl font-serif text-primary tracking-wide">Whisper Tales</h1>
           <nav className="flex gap-4 text-sm text-foreground/80">
             <Link href="/pricing" className="hover:text-primary transition">Pricing</Link>
             <Link href="/login" className="hover:text-primary transition">Sign In</Link>
@@ -46,17 +38,13 @@ export default function Home() {
             Hand-picked tales of romance, fantasy, and mystery. Unlock one chapter at a time—or become a member for unlimited reading.
           </p>
 
-          {loading ? (
-            <p className="text-center text-foreground/50">Loading novels...</p>
-          ) : novels.length === 0 ? (
-            <p className="text-center text-foreground/50">No novels available yet. Check back soon!</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {novels.map((novel: any) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {novels.length === 0 ? (
+              <p className="text-foreground/40 text-center col-span-full">No novels available yet. Check back soon!</p>
+            ) : (
+              novels.map((novel: any) => (
                 <Link key={novel.id} href={`/novel/${novel.id}`} className="group">
-                  {/* 卡片容器 */}
-                  <div className="rounded-2xl bg-card hover:ring-2 hover:ring-primary/30 transition-all duration-300 shadow-lg overflow-hidden">
-                    {/* 封面图片 - 完整展示，无文字覆盖 */}
+                  <div className="relative overflow-hidden rounded-2xl bg-card hover:ring-2 hover:ring-primary/30 transition-all duration-300 shadow-lg">
                     <div className="aspect-[3/4] bg-gradient-to-b from-primary/10 to-card">
                       {novel.cover_url ? (
                         <img
@@ -70,20 +58,15 @@ export default function Home() {
                         </div>
                       )}
                     </div>
-                    {/* 书名和作者 - 放在封面下方 */}
-                    <div className="p-4">
-                      <h3 className="font-serif text-lg text-white mb-1 line-clamp-2">
-                        {novel.title}
-                      </h3>
-                      <p className="text-sm text-gray-400">
-                        by {novel.author}
-                      </p>
+                    <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/80 to-transparent">
+                      <h3 className="font-serif text-2xl text-white mb-1">{novel.title}</h3>
+                      <p className="text-sm text-gray-300">by {novel.author}</p>
                     </div>
                   </div>
                 </Link>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
       </section>
     </main>
