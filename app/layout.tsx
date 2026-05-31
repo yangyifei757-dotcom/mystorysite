@@ -6,8 +6,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
 
 export const metadata: Metadata = {
-  title: 'NovelCrush - Love stories that command.',
-  description: 'Indulge in billionaire romances, fierce love, and stories that command your heart.',
+  title: 'NovelCrush - Find Your Next Story',
+  description: 'Unlock stories that captivate your soul. Subscribe or read chapter by chapter.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
