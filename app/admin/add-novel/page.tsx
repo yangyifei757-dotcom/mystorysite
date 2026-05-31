@@ -56,7 +56,7 @@ export default function AddNovelPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-8 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-serif text-primary mb-8">📖 Upload a Novel</h1>
+      <h1 className="text-3xl font-serif text-primary mb-8">NovelCrush - 📖 Upload a Novel</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input placeholder="Title *" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-3 rounded bg-card border border-border" required />
         <input placeholder="Author *" value={author} onChange={e => setAuthor(e.target.value)} className="w-full p-3 rounded bg-card border border-border" required />
