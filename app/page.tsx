@@ -17,7 +17,7 @@ export default async function Home() {
     <main className="min-h-screen bg-background">
       <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-serif text-primary tracking-wide">Whisper Tales</h1>
+          <h1 className="text-2xl font-serif text-primary tracking-wide">NovelCrush</h1>
           <nav className="flex gap-4 text-sm text-foreground/80">
             <Link href="/pricing" className="hover:text-primary transition">Pricing</Link>
             <Link href="/login" className="hover:text-primary transition">Sign In</Link>
@@ -28,10 +28,10 @@ export default async function Home() {
       <section className="pt-24 pb-16 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl md:text-6xl font-serif text-center mb-4 leading-tight">
-            Stories that <span className="text-primary">stay with you</span>
+            Love stories that <span className="text-primary">command.</span>
           </h2>
           <p className="text-center text-foreground/60 max-w-2xl mx-auto mb-16">
-            Hand-picked tales of romance, fantasy, and mystery. Unlock one chapter at a time—or become a member for unlimited reading.
+            Billionaire romances, fierce kisses, and addictive drama. Unlock one chapter at a time—or become a member for unlimited reading.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
