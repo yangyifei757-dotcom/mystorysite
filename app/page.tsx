@@ -53,6 +53,44 @@ export default function Home() {
     }
   }
 
+  const handleCancelSubscription = async () => {
+    // 挽留策略：收集取消原因
+    const reason = prompt(
+      'We\'re sorry to see you go. Could you tell us why you want to cancel?\n\n' +
+      '(Optional) Leave a reason or click OK to continue cancellation.'
+    )
+
+    // 如果用户关闭了对话框，则放弃取消
+    if (reason === null) return
+
+    // 第二次确认
+    if (!confirm('Are you sure you want to cancel your subscription? You will still have access until the end of your billing period.')) {
+      return
+    }
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) {
+      alert('You must be logged in.')
+      return
+    }
+
+    const res = await fetch('/api/cancel-subscription', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    const data = await res.json()
+    if (data.success) {
+      alert('Your subscription has been cancelled. You can continue reading until the end of the billing period.')
+      window.location.reload()
+    } else {
+      alert('Cancellation failed: ' + (data.error || 'Unknown error'))
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background">
       <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-background/80 border-b border-border">
@@ -72,6 +110,12 @@ export default function Home() {
                   className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition cursor-pointer"
                 >
                   Manage Subscription
+                </button>
+                <button
+                  onClick={handleCancelSubscription}
+                  className="text-xs bg-red-900/30 text-red-300 px-3 py-1 rounded-full hover:bg-red-900/50 transition cursor-pointer"
+                >
+                  Cancel Subscription
                 </button>
                 <button onClick={handleLogout} className="hover:text-primary transition">
                   Logout
