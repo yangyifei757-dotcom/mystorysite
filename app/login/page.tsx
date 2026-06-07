@@ -24,15 +24,28 @@ export default function LoginPage() {
 
   const handleSignUp = async () => {
     if (!email || !password) {
-      setMessage('Email and password required.')
+      setMessage('Email and password are required.')
       return
     }
     setLoading(true)
-    const { error } = await supabase.auth.signUp({ email, password })
+    setMessage('')
+    const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) {
       setMessage(error.message)
+    } else if (data?.user?.id) {
+      // 自动在 profiles 表创建对应记录
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({ id: data.user.id, email: email })
+
+      if (profileError) {
+        console.error('Profile creation failed:', profileError)
+        setMessage('Account created but profile setup failed. Please contact support.')
+      } else {
+        setMessage('Registration successful! You can now log in.')
+      }
     } else {
-      setMessage('Check your email to confirm your account! (Test mode may skip confirmation)')
+      setMessage('Registration successful! You can now log in.')
     }
     setLoading(false)
   }
@@ -68,7 +81,7 @@ export default function LoginPage() {
         </form>
         <p className="text-center mt-4 text-sm text-foreground/50">
           Don't have an account?{' '}
-          <button onClick={handleSignUp} className="text-primary hover:underline">
+          <button onClick={handleSignUp} className="text-primary hover:underline" disabled={loading}>
             Sign up
           </button>
         </p>
