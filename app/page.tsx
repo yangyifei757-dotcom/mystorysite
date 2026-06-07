@@ -51,6 +51,8 @@ export default function Home() {
     }
   }
 
+  // 取消订阅功能（暂时隐藏按钮，代码保留以便将来启用）
+  /*
   const handleCancelSubscription = async () => {
     const reason = prompt(
       'We\'re sorry to see you go. Could you tell us why you want to cancel?\n\n' +
@@ -85,6 +87,7 @@ export default function Home() {
       alert('Cancellation failed: ' + (data.error || 'Unknown error'))
     }
   }
+  */
 
   return (
     <main className="min-h-screen bg-background">
@@ -106,7 +109,8 @@ export default function Home() {
                 >
                   Manage Subscription
                 </button>
-                {/* 低调的取消按钮 */}
+                {/* 取消按钮暂时隐藏，需要时取消注释即可 */}
+                {/*
                 <button
                   onClick={handleCancelSubscription}
                   className="text-xs text-foreground/30 hover:text-red-400 transition cursor-pointer ml-4"
@@ -114,6 +118,7 @@ export default function Home() {
                 >
                   Cancel
                 </button>
+                */}
                 <button onClick={handleLogout} className="hover:text-primary transition">
                   Logout
                 </button>
