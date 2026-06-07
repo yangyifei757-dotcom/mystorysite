@@ -11,7 +11,7 @@ export default function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // 获取小说
+      // 获取小说列表
       const { data } = await supabase
         .from('novels')
         .select('*')
@@ -34,24 +34,53 @@ export default function Home() {
     window.location.reload()
   }
 
+  const handleManageSubscription = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) {
+      alert('You must be logged in to manage your subscription.')
+      return
+    }
+
+    const res = await fetch('/api/portal', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const data = await res.json()
+    if (data.url) {
+      window.location.href = data.url
+    } else {
+      alert('Could not open subscription management. Please try again.')
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background">
       <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <h1 className="text-2xl font-serif text-primary tracking-wide">NovelCrush</h1>
           <nav className="flex items-center gap-4 text-sm text-foreground/80">
-            <Link href="/pricing" className="hover:text-primary transition">Pricing</Link>
+            <Link href="/pricing" className="hover:text-primary transition">
+              Pricing
+            </Link>
             {user ? (
               <div className="flex items-center gap-3">
                 <span className="text-green-400 text-xs bg-green-900/30 px-2 py-1 rounded-full">
                   Logged in as {user.email}
                 </span>
+                <button
+                  onClick={handleManageSubscription}
+                  className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition cursor-pointer"
+                >
+                  Manage Subscription
+                </button>
                 <button onClick={handleLogout} className="hover:text-primary transition">
                   Logout
                 </button>
               </div>
             ) : (
-              <Link href="/login" className="hover:text-primary transition">Sign In</Link>
+              <Link href="/login" className="hover:text-primary transition">
+                Sign In
+              </Link>
             )}
           </nav>
         </div>
@@ -63,23 +92,32 @@ export default function Home() {
             Stories that <span className="text-primary">stay with you</span>
           </h2>
           <p className="text-center text-foreground/60 max-w-2xl mx-auto mb-16">
-            Hand-picked tales of romance, fantasy, and mystery. Unlock one chapter at a time—or become a member for unlimited reading.
+            Hand-picked tales of romance, fantasy, and mystery. Unlock one chapter at a time—or become a
+            member for unlimited reading.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {loading ? (
               <p className="text-foreground/40 text-center col-span-full">Loading...</p>
             ) : novels.length === 0 ? (
-              <p className="text-foreground/40 text-center col-span-full">No novels available yet. Check back soon!</p>
+              <p className="text-foreground/40 text-center col-span-full">
+                No novels available yet. Check back soon!
+              </p>
             ) : (
               novels.map((novel: any) => (
                 <Link key={novel.id} href={`/novel/${novel.id}`} className="group">
                   <div className="rounded-2xl bg-card hover:ring-2 hover:ring-primary/30 transition-all duration-300 shadow-lg overflow-hidden">
                     <div className="aspect-[3/4] bg-gradient-to-b from-primary/10 to-card">
                       {novel.cover_url ? (
-                        <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img
+                          src={novel.cover_url}
+                          alt={novel.title}
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
                       ) : (
-                        <div className="h-full w-full flex items-center justify-center text-foreground/20 text-6xl font-serif">{novel.title?.charAt(0) || '?'}</div>
+                        <div className="h-full w-full flex items-center justify-center text-foreground/20 text-6xl font-serif">
+                          {novel.title?.charAt(0) || '?'}
+                        </div>
                       )}
                     </div>
                     <div className="p-4">
