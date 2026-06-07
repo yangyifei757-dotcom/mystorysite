@@ -11,12 +11,12 @@ export default function NovelPage() {
 
   const [novel, setNovel] = useState<any>(null)
   const [chapters, setChapters] = useState<any[]>([])
+  const [user, setUser] = useState<any>(null)
   const [hasSubscription, setHasSubscription] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
-      // 获取小说和章节
       const { data: novelData } = await supabase.from('novels').select('*').eq('id', id).single()
       const { data: chaptersData } = await supabase
         .from('chapters')
@@ -27,13 +27,15 @@ export default function NovelPage() {
       setNovel(novelData)
       setChapters(chaptersData || [])
 
-      // 检查当前用户订阅状态
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      const currentUser = session?.user || null
+      setUser(currentUser)
+
+      if (currentUser) {
         const { data: sub } = await supabase
           .from('subscriptions')
           .select('status, current_period_end')
-          .eq('user_id', user.id)
+          .eq('user_id', currentUser.id)
           .single()
 
         if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
@@ -46,16 +48,16 @@ export default function NovelPage() {
     fetchData()
   }, [id])
 
-  if (loading) {
-    return <div className="text-white p-20 text-center">Loading...</div>
-  }
-
-  if (!novel) {
-    return <div className="text-white p-20 text-center">Novel not found</div>
-  }
+  if (loading) return <div className="text-white p-20 text-center">Loading...</div>
+  if (!novel) return <div className="text-white p-20 text-center">Novel not found</div>
 
   return (
     <main className="min-h-screen bg-background pt-24 pb-16 px-4">
+      {/* 调试信息（排查问题用，以后可删除） */}
+      <div className="max-w-4xl mx-auto mb-4 p-3 bg-gray-800 rounded text-xs text-gray-300">
+        <strong>Debug:</strong> User: {user ? user.email : 'Not logged in'} | Subscription: {hasSubscription ? 'Active' : 'None'}
+      </div>
+
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-10">
         <div className="w-full md:w-1/3">
           <div className="rounded-2xl overflow-hidden shadow-2xl aspect-[3/4] bg-card">
@@ -77,16 +79,26 @@ export default function NovelPage() {
 
               return (
                 <div key={chapter.id} className="flex justify-between items-center p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition">
-                  <span className="text-foreground/80">
-                    Chapter {chapter.order_num}: {chapter.title}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-foreground/80">
+                      Chapter {chapter.order_num}: {chapter.title}
+                    </span>
+                    {/* 只有非订阅用户才显示状态标签 */}
+                    {!hasSubscription && (
+                      isFree ? (
+                        <span className="text-xs bg-green-900/40 text-green-300 px-2 py-0.5 rounded font-medium">Free</span>
+                      ) : (
+                        <span className="text-gray-400 text-lg">🔒</span>
+                      )
+                    )}
+                  </div>
                   {canAccess ? (
                     <Link href={`/read/${chapter.id}`} className="text-sm bg-primary text-background px-4 py-1 rounded-full hover:bg-primary/90 transition">
                       Read
                     </Link>
                   ) : (
-                    <Link href="/pricing" className="text-sm bg-primary/20 text-primary px-3 py-1 rounded-full">
-                      🔒 Unlock with 10 coins
+                    <Link href="/pricing" className="text-sm bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition">
+                      🔒
                     </Link>
                   )}
                 </div>
