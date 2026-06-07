@@ -23,17 +23,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Webhook Error' }, { status: 400 })
   }
 
-  // 只处理结算完成事件
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session
-    const email = session.customer_email || session.customer_details?.email
+  // 处理账单支付成功事件（订阅最可靠的信号）
+  if (event.type === 'invoice.payment.paid') {
+    const invoice = event.data.object as Stripe.Invoice
+    const email = invoice.customer_email
 
     if (!email) {
-      console.error('❌ No email in session')
+      console.error('❌ No email in invoice')
       return NextResponse.json({ error: 'No email' }, { status: 400 })
     }
 
-    // 查找或创建用户（基于邮箱）
+    // 查找或创建用户
     let { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id')
@@ -54,10 +54,18 @@ export async function POST(request: Request) {
       profile = newProfile
     }
 
-    // 从 metadata 读取计划（weekly/monthly/yearly）
-    const plan = session.metadata?.plan || 'monthly'
+    // 从 invoice 的 subscription 获取计划信息
+    let plan = 'monthly' // 默认
+    if (invoice.subscription) {
+      const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string)
+      // 通过价格金额判断计划
+      const amount = invoice.amount_paid / 100 // 美元金额
+      if (amount === 2.99) plan = 'weekly'
+      else if (amount === 9.99) plan = 'monthly'
+      else if (amount === 99.99) plan = 'yearly'
+    }
 
-    // 计算到期日
+    // 计算到期日（从当前时间开始算）
     const now = new Date()
     let periodEnd = new Date(now)
     if (plan === 'weekly') periodEnd.setDate(periodEnd.getDate() + 7)
@@ -78,7 +86,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Subscription upsert failed' }, { status: 500 })
     }
 
-    console.log(`✅ Subscription activated for ${email} (plan: ${plan})`)
+    console.log(`✅ Subscription activated for ${email} (plan: ${plan}, amount: $${invoice.amount_paid / 100})`)
+  }
+
+  // 也保留 checkout.session.completed 处理（备用）
+  if (event.type === 'checkout.session.completed') {
+    console.log('📦 checkout.session.completed received (backup handler)')
+    // 这里可以留空，因为已经用 invoice.paid 处理了
   }
 
   return NextResponse.json({ received: true })
