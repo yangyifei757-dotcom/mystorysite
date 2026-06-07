@@ -1,31 +1,57 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 
-export default async function NovelPage({ params }: { params: { id: string } }) {
-  const { id } = params
-  const { data: novel } = await supabase.from('novels').select('*').eq('id', id).single()
-  const { data: chapters } = await supabase
-    .from('chapters')
-    .select('*')
-    .eq('novel_id', id)
-    .order('order_num', { ascending: true })
+export default function NovelPage() {
+  const params = useParams()
+  const id = params.id as string
 
-  if (!novel) return <div className="text-white p-20 text-center">Novel not found</div>
+  const [novel, setNovel] = useState<any>(null)
+  const [chapters, setChapters] = useState<any[]>([])
+  const [hasSubscription, setHasSubscription] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  // 获取当前登录用户
-  const { data: { user } } = await supabase.auth.getUser()
-  let hasActiveSubscription = false
+  useEffect(() => {
+    const fetchData = async () => {
+      // 获取小说和章节
+      const { data: novelData } = await supabase.from('novels').select('*').eq('id', id).single()
+      const { data: chaptersData } = await supabase
+        .from('chapters')
+        .select('*')
+        .eq('novel_id', id)
+        .order('order_num', { ascending: true })
 
-  if (user) {
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('status, current_period_end')
-      .eq('user_id', user.id)
-      .single()
+      setNovel(novelData)
+      setChapters(chaptersData || [])
 
-    if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
-      hasActiveSubscription = true
+      // 检查当前用户订阅状态
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('status, current_period_end')
+          .eq('user_id', user.id)
+          .single()
+
+        if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
+          setHasSubscription(true)
+        }
+      }
+      setLoading(false)
     }
+
+    fetchData()
+  }, [id])
+
+  if (loading) {
+    return <div className="text-white p-20 text-center">Loading...</div>
+  }
+
+  if (!novel) {
+    return <div className="text-white p-20 text-center">Novel not found</div>
   }
 
   return (
@@ -45,9 +71,9 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
 
           <h2 className="text-2xl font-serif mb-4">Chapters</h2>
           <div className="space-y-3">
-            {chapters?.map((chapter: any) => {
+            {chapters.map((chapter: any) => {
               const isFree = !chapter.is_locked
-              const canAccess = isFree || hasActiveSubscription
+              const canAccess = isFree || hasSubscription
 
               return (
                 <div key={chapter.id} className="flex justify-between items-center p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition">
