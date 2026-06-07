@@ -11,7 +11,6 @@ export default function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // 获取小说列表
       const { data } = await supabase
         .from('novels')
         .select('*')
@@ -19,7 +18,6 @@ export default function Home() {
         .order('created_at', { ascending: false })
       setNovels(data || [])
 
-      // 获取当前登录用户
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
       setLoading(false)
@@ -54,16 +52,13 @@ export default function Home() {
   }
 
   const handleCancelSubscription = async () => {
-    // 挽留策略：收集取消原因
     const reason = prompt(
       'We\'re sorry to see you go. Could you tell us why you want to cancel?\n\n' +
       '(Optional) Leave a reason or click OK to continue cancellation.'
     )
 
-    // 如果用户关闭了对话框，则放弃取消
     if (reason === null) return
 
-    // 第二次确认
     if (!confirm('Are you sure you want to cancel your subscription? You will still have access until the end of your billing period.')) {
       return
     }
@@ -111,11 +106,13 @@ export default function Home() {
                 >
                   Manage Subscription
                 </button>
+                {/* 低调的取消按钮 */}
                 <button
                   onClick={handleCancelSubscription}
-                  className="text-xs bg-red-900/30 text-red-300 px-3 py-1 rounded-full hover:bg-red-900/50 transition cursor-pointer"
+                  className="text-xs text-foreground/30 hover:text-red-400 transition cursor-pointer ml-4"
+                  title="Cancel subscription"
                 >
-                  Cancel Subscription
+                  Cancel
                 </button>
                 <button onClick={handleLogout} className="hover:text-primary transition">
                   Logout
