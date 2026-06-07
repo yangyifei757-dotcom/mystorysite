@@ -23,7 +23,6 @@ export default function ReadPage() {
         .single()
 
       setChapter(chapterData)
-
       if (!chapterData) {
         setLoading(false)
         return
@@ -35,18 +34,20 @@ export default function ReadPage() {
         return
       }
 
-      // 付费章节：检查用户权限
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/pricing?message=Please login or subscribe')
+      // 获取 session
+      const { data: { session } } = await supabase.auth.getSession()
+      const currentUser = session?.user || null
+
+      if (!currentUser) {
+        router.push('/pricing?message=Please login')
         return
       }
 
-      // 检查是否已购买
+      // 检查解锁
       const { data: unlock } = await supabase
         .from('chapter_unlocks')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', currentUser.id)
         .eq('chapter_id', chapterId)
         .single()
 
@@ -60,13 +61,13 @@ export default function ReadPage() {
       const { data: sub } = await supabase
         .from('subscriptions')
         .select('status, current_period_end')
-        .eq('user_id', user.id)
+        .eq('user_id', currentUser.id)
         .single()
 
       if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
         setCanRead(true)
       } else {
-        router.push('/pricing?message=Please subscribe to read')
+        router.push('/pricing?message=Subscribe to read')
       }
       setLoading(false)
     }
@@ -74,17 +75,9 @@ export default function ReadPage() {
     checkAccess()
   }, [chapterId, router])
 
-  if (loading) {
-    return <div className="text-white p-20 text-center">Checking access...</div>
-  }
-
-  if (!chapter) {
-    return <div className="text-white p-20 text-center">Chapter not found</div>
-  }
-
-  if (!canRead) {
-    return null // 路由器会重定向
-  }
+  if (loading) return <div className="text-white p-20 text-center">Checking access...</div>
+  if (!chapter) return <div className="text-white p-20 text-center">Chapter not found</div>
+  if (!canRead) return null
 
   return (
     <main className="min-h-screen bg-background flex flex-col items-center px-4 py-16">
@@ -99,10 +92,6 @@ export default function ReadPage() {
           {chapter.content.split('\n').map((p: string, i: number) => (
             <p key={i}>{p}</p>
           ))}
-        </div>
-        <div className="mt-12 flex justify-between">
-          <button className="text-foreground/60 hover:text-primary transition">← Previous</button>
-          <button className="text-foreground/60 hover:text-primary transition">Next →</button>
         </div>
       </article>
     </main>
