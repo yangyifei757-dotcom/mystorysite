@@ -1,31 +1,58 @@
+'use client'
+
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
+import { useEffect, useState } from 'react'
 
-export default async function Home() {
-  let novels: any[] = []
-  let error = null
+export default function Home() {
+  const [novels, setNovels] = useState<any[]>([])
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  try {
-    const { data, error: dbError } = await supabase
-      .from('novels')
-      .select('*')
-      .eq('status', 'published')
-      .order('created_at', { ascending: false })
-    novels = data || []
-    error = dbError
-  } catch (e) {
-    error = e
+  useEffect(() => {
+    const fetchData = async () => {
+      // 获取小说
+      const { data } = await supabase
+        .from('novels')
+        .select('*')
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+      setNovels(data || [])
+
+      // 获取当前登录用户
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      setLoading(false)
+    }
+
+    fetchData()
+  }, [])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    window.location.reload()
   }
 
   return (
     <main className="min-h-screen bg-background">
       <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          {/* ✅ 改这里 */}
           <h1 className="text-2xl font-serif text-primary tracking-wide">NovelCrush</h1>
-          <nav className="flex gap-4 text-sm text-foreground/80">
+          <nav className="flex items-center gap-4 text-sm text-foreground/80">
             <Link href="/pricing" className="hover:text-primary transition">Pricing</Link>
-            <Link href="/login" className="hover:text-primary transition">Sign In</Link>
+            {user ? (
+              <div className="flex items-center gap-3">
+                <span className="text-green-400 text-xs bg-green-900/30 px-2 py-1 rounded-full">
+                  Logged in as {user.email}
+                </span>
+                <button onClick={handleLogout} className="hover:text-primary transition">
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" className="hover:text-primary transition">Sign In</Link>
+            )}
           </nav>
         </div>
       </header>
@@ -40,7 +67,9 @@ export default async function Home() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {novels.length === 0 ? (
+            {loading ? (
+              <p className="text-foreground/40 text-center col-span-full">Loading...</p>
+            ) : novels.length === 0 ? (
               <p className="text-foreground/40 text-center col-span-full">No novels available yet. Check back soon!</p>
             ) : (
               novels.map((novel: any) => (
@@ -50,9 +79,7 @@ export default async function Home() {
                       {novel.cover_url ? (
                         <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
-                        <div className="h-full w-full flex items-center justify-center text-foreground/20 text-6xl font-serif">
-                          {novel.title?.charAt(0) || '?'}
-                        </div>
+                        <div className="h-full w-full flex items-center justify-center text-foreground/20 text-6xl font-serif">{novel.title?.charAt(0) || '?'}</div>
                       )}
                     </div>
                     <div className="p-4">
