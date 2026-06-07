@@ -14,34 +14,79 @@ export default function NovelPage() {
   const [user, setUser] = useState<any>(null)
   const [hasSubscription, setHasSubscription] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [debugInfo, setDebugInfo] = useState<any>({})
 
   useEffect(() => {
     const fetchData = async () => {
+      // 获取小说信息
       const { data: novelData } = await supabase.from('novels').select('*').eq('id', id).single()
-      const { data: chaptersData } = await supabase
-        .from('chapters')
-        .select('*')
-        .eq('novel_id', id)
-        .order('order_num', { ascending: true })
-
+      const { data: chaptersData } = await supabase.from('chapters').select('*').eq('novel_id', id).order('order_num', { ascending: true })
       setNovel(novelData)
       setChapters(chaptersData || [])
 
+      // 获取当前登录用户
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
       setUser(currentUser)
 
+      let subResult = null
+      let subError = null
+      let apiResult = null
+      let apiError = null
+
       if (currentUser) {
-        const { data: sub } = await supabase
+        // 方式1：通过 Supabase 客户端查询
+        const { data, error } = await supabase
           .from('subscriptions')
-          .select('status, current_period_end')
+          .select('*')
           .eq('user_id', currentUser.id)
           .single()
+        subResult = data
+        subError = error
 
-        if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
+        // 方式2：直接用 fetch 调用 REST API（使用 anon key）
+        try {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dajwjltopgbbzdavvoac.supabase.co'
+          const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key'
+          const res = await fetch(
+            `${supabaseUrl}/rest/v1/subscriptions?user_id=eq.${currentUser.id}&select=*`,
+            {
+              headers: {
+                'apikey': anonKey,
+                'Authorization': `Bearer ${anonKey}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          )
+          if (res.ok) {
+            apiResult = await res.json()
+          } else {
+            apiError = await res.text()
+          }
+        } catch (fetchErr: any) {
+          apiError = fetchErr.message
+        }
+
+        // 判断订阅是否有效
+        if (subResult && subResult.status === 'active' && new Date(subResult.current_period_end) > new Date()) {
           setHasSubscription(true)
+        } else if (apiResult && apiResult.length > 0) {
+          // 客户端查不到但 API 查到了
+          const apiSub = apiResult[0]
+          if (apiSub.status === 'active' && new Date(apiSub.current_period_end) > new Date()) {
+            setHasSubscription(true)
+          }
         }
       }
+
+      setDebugInfo({
+        userId: currentUser?.id,
+        clientResult: subResult,
+        clientError: subError?.message,
+        apiResult,
+        apiError,
+        apiUrl: currentUser ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${currentUser.id}` : '',
+      })
       setLoading(false)
     }
 
@@ -53,12 +98,19 @@ export default function NovelPage() {
 
   return (
     <main className="min-h-screen bg-background pt-24 pb-16 px-4">
-      {/* 调试信息（排查问题用，以后可删除） */}
-      <div className="max-w-4xl mx-auto mb-4 p-3 bg-gray-800 rounded text-xs text-gray-300">
-        <strong>Debug:</strong> User: {user ? user.email : 'Not logged in'} | Subscription: {hasSubscription ? 'Active' : 'None'}
+      {/* 调试信息（展示所有查询细节） */}
+      <div className="max-w-4xl mx-auto mb-4 p-4 bg-gray-800 rounded text-xs text-gray-300 space-y-1">
+        <div><strong>User ID:</strong> {debugInfo.userId || 'null'}</div>
+        <div><strong>Client result:</strong> {JSON.stringify(debugInfo.clientResult)}</div>
+        <div><strong>Client error:</strong> {debugInfo.clientError || 'none'}</div>
+        <div><strong>API result:</strong> {JSON.stringify(debugInfo.apiResult)}</div>
+        <div><strong>API error:</strong> {debugInfo.apiError || 'none'}</div>
+        <div><strong>Subscription active:</strong> {hasSubscription ? 'Yes ✅' : 'No ❌'}</div>
       </div>
 
+      {/* 原有内容 */}
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-10">
+        {/* 封面 */}
         <div className="w-full md:w-1/3">
           <div className="rounded-2xl overflow-hidden shadow-2xl aspect-[3/4] bg-card">
             {novel.cover_url && (
@@ -83,7 +135,6 @@ export default function NovelPage() {
                     <span className="text-foreground/80">
                       Chapter {chapter.order_num}: {chapter.title}
                     </span>
-                    {/* 只有非订阅用户才显示状态标签 */}
                     {!hasSubscription && (
                       isFree ? (
                         <span className="text-xs bg-green-900/40 text-green-300 px-2 py-0.5 rounded font-medium">Free</span>
