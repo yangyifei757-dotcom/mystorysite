@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
 
 export const metadata: Metadata = {
-  title: 'NovelCrush - Find Your Next Story',
+  title: 'IvyNovel - Immersive Romance Stories',
   description: 'Unlock stories that captivate your soul. Subscribe or read chapter by chapter.',
 }
 
