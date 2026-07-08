@@ -33,11 +33,9 @@ export default function LoginPage() {
     if (error) {
       setMessage(error.message)
     } else if (data?.user?.id) {
-      // 自动在 profiles 表创建对应记录
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({ id: data.user.id, email: email })
-
       if (profileError) {
         console.error('Profile creation failed:', profileError)
         setMessage('Account created but profile setup failed. Please contact support.')
@@ -53,7 +51,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-card p-8 rounded-2xl border border-border">
-        <h1 className="text-2xl font-serif text-primary mb-6 text-center">NovelCrush Login</h1>
+        <h1 className="text-2xl font-serif text-primary mb-6 text-center">IvyNovel Login</h1>
         <form onSubmit={handleLogin} className="space-y-4">
           <input
             type="email"
