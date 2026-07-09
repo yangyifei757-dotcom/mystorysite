@@ -4,8 +4,13 @@
 
 @layer base {
   :root {
-    --background: 255 2% 5%;
-    --foreground: 42 20% 90%;
-    --border: 255 2% 15%;
+    --background: 0 30% 98%;   /* 极浅粉白 */
+    --foreground: 345 10% 20%; /* 柔棕 */
+    --border: 340 20% 90%;     /* 浅粉边框 */
   }
+}
+
+body {
+  background-color: hsl(0, 30%, 98%);
+  color: hsl(345, 10%, 20%);
 }
