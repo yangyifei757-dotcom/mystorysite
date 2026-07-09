@@ -8,6 +8,7 @@ export default function Home() {
   const [novels, setNovels] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [currentSlide, setCurrentSlide] = useState(0)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -22,9 +23,17 @@ export default function Home() {
       setUser(user)
       setLoading(false)
     }
-
     fetchData()
   }, [])
+
+  // 轮播自动切换
+  useEffect(() => {
+    if (novels.length === 0) return
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % Math.min(novels.length, 3))
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [novels])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -39,7 +48,6 @@ export default function Home() {
       alert('You must be logged in to manage your subscription.')
       return
     }
-
     const res = await fetch('/api/portal', {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -47,26 +55,30 @@ export default function Home() {
     if (data.url) {
       window.location.href = data.url
     } else {
-      alert('Could not open subscription management. Please try again.')
+      alert('Could not open subscription management.')
     }
   }
 
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading...</div>
+
+  const bannerNovels = novels.slice(0, 3)
+
   return (
     <main className="min-h-screen bg-background">
-      <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-background/80 border-b border-border">
+      {/* 导航栏 */}
+      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-serif text-primary tracking-wide">IvyNovel</h1>
-          <nav className="flex items-center gap-4 text-sm text-foreground/80">
+          <Link href="/" className="text-2xl font-serif text-primary tracking-wide hover:opacity-80 transition">
+            IvyNovel
+          </Link>
+          <nav className="flex items-center gap-4 text-sm text-foreground/70">
             <Link href="/pricing" className="hover:text-primary transition">Pricing</Link>
             {user ? (
               <div className="flex items-center gap-3">
-                <span className="text-green-400 text-xs bg-green-900/30 px-2 py-1 rounded-full">
-                  Logged in as {user.email}
+                <span className="text-xs bg-accent text-accent-foreground px-2 py-1 rounded-full">
+                  {user.email}
                 </span>
-                <button
-                  onClick={handleManageSubscription}
-                  className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition cursor-pointer"
-                >
+                <button onClick={handleManageSubscription} className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full hover:bg-primary/20 transition">
                   Manage Subscription
                 </button>
                 <button onClick={handleLogout} className="hover:text-primary transition">Logout</button>
@@ -78,41 +90,85 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="pt-24 pb-16 px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-6xl font-serif text-center mb-4 leading-tight">
-            Stories that <span className="text-primary">stay with you</span>
-          </h2>
-          <p className="text-center text-foreground/60 max-w-2xl mx-auto mb-16">
-            Hand-picked tales of romance, fantasy, and mystery. Unlock one chapter at a time—or become a member for unlimited reading.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {loading ? (
-              <p className="text-foreground/40 text-center col-span-full">Loading...</p>
-            ) : novels.length === 0 ? (
-              <p className="text-foreground/40 text-center col-span-full">No novels available yet. Check back soon!</p>
-            ) : (
-              novels.map((novel: any) => (
-                <Link key={novel.id} href={`/novel/${novel.id}`} className="group">
-                  <div className="rounded-2xl bg-card hover:ring-2 hover:ring-primary/30 transition-all duration-300 shadow-lg overflow-hidden">
-                    <div className="aspect-[3/4] bg-gradient-to-b from-primary/10 to-card">
-                      {novel.cover_url ? (
-                        <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-foreground/20 text-6xl font-serif">{novel.title?.charAt(0) || '?'}</div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-serif text-xl text-white mb-1 line-clamp-1">{novel.title}</h3>
-                      <p className="text-sm text-gray-400">by {novel.author}</p>
-                    </div>
+      {/* Hero Banner */}
+      {bannerNovels.length > 0 && (
+        <section className="pt-20 pb-8 px-4">
+          <div className="max-w-6xl mx-auto relative overflow-hidden rounded-2xl shadow-card" style={{ backgroundColor: '#FCF7F8' }}>
+            <div className="flex transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+              {bannerNovels.map((novel: any, idx: number) => (
+                <Link key={novel.id} href={`/novel/${novel.id}`} className="w-full flex-shrink-0 flex flex-col md:flex-row items-center p-6 md:p-10">
+                  <div className="w-32 md:w-40 aspect-[3/4] rounded-xl overflow-hidden shadow-lg mb-4 md:mb-0 md:mr-8">
+                    {novel.cover_url ? (
+                      <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full bg-accent flex items-center justify-center text-3xl text-primary">{novel.title?.charAt(0)}</div>
+                    )}
+                  </div>
+                  <div className="flex-1 text-center md:text-left">
+                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full mb-2 inline-block">Recommended</span>
+                    <h2 className="text-2xl md:text-4xl font-serif text-foreground mb-1">{novel.title}</h2>
+                    <p className="text-foreground/60 text-sm mb-3">by {novel.author}</p>
+                    <p className="text-foreground/70 text-sm line-clamp-2 mb-4">{novel.description}</p>
+                    <span className="inline-block bg-primary text-primary-foreground px-5 py-2 rounded-full text-sm font-medium hover:bg-primary/90 transition">
+                      Start Reading
+                    </span>
                   </div>
                 </Link>
-              ))
+              ))}
+            </div>
+            {/* 轮播指示点 */}
+            {bannerNovels.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                {bannerNovels.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentSlide(idx)}
+                    className={`w-2.5 h-2.5 rounded-full transition ${idx === currentSlide ? 'bg-primary scale-110' : 'bg-primary/30'}`}
+                  />
+                ))}
+              </div>
             )}
           </div>
+        </section>
+      )}
+
+      {/* You May Like */}
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl md:text-3xl font-serif text-foreground">You May Like</h2>
+          <Link href="#" className="text-sm text-primary hover:underline">View All</Link>
         </div>
+
+        {novels.length === 0 ? (
+          <div className="text-center py-20 text-foreground/40 bg-card rounded-2xl shadow-card">
+            <p className="text-lg">✨ Our stories are brewing...</p>
+            <p className="text-sm mt-2">Check back soon for handpicked romantic tales.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+            {novels.map((novel: any) => (
+              <Link key={novel.id} href={`/novel/${novel.id}`} className="group flex flex-col">
+                <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300">
+                  {novel.cover_url ? (
+                    <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : (
+                    <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
+                  )}
+                  {/* 标签 */}
+                  {novel.tags?.[0] && (
+                    <span className="absolute top-2 left-2 bg-white/90 text-foreground text-[10px] px-1.5 py-0.5 rounded-md shadow">
+                      {novel.tags[0]}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2 px-1">
+                  <h3 className="font-serif text-sm font-medium text-foreground line-clamp-1">{novel.title}</h3>
+                  <p className="text-xs text-foreground/50 mt-0.5">{novel.author}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   )
