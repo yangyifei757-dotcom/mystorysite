@@ -23,7 +23,7 @@ export default function ReadPage() {
   const [loading, setLoading] = useState(true)
   const [fontSize, setFontSize] = useState(18)
   const [bgMode, setBgMode] = useState<keyof typeof BG_STYLES>('warm')
-  const [hasSubscription, setHasSubscription] = useState(false) // 新增
+  const [hasSubscription, setHasSubscription] = useState(false)
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -42,12 +42,20 @@ export default function ReadPage() {
       setChapter(chapterData)
       setNovel(chapterData.novel)
 
-      // 2. 获取当前用户及订阅状态（无论免费还是付费章节）
+      // 2. 获取当前用户及订阅状态
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
 
       let subscribed = false
       if (currentUser) {
+        // 自动保存阅读进度
+        await supabase.from('reading_progress').upsert({
+          user_id: currentUser.id,
+          chapter_id: chapterId,
+          progress: 0, // 可以后续扩展为百分比
+          updated_at: new Date().toISOString(),
+        })
+
         const { data: sub } = await supabase
           .from('subscriptions')
           .select('status, current_period_end')
@@ -61,10 +69,8 @@ export default function ReadPage() {
 
       // 3. 判断阅读权限
       if (!chapterData.is_locked) {
-        // 免费章节所有人可读
         setCanRead(true)
       } else {
-        // 付费章节：需要订阅
         if (!currentUser) {
           router.push('/pricing?message=Please login to read')
           return
@@ -142,7 +148,7 @@ export default function ReadPage() {
           <p key={i} className="mb-4">{p}</p>
         ))}
 
-        {/* 会员引导卡片（仅当免费章节 + 用户未订阅时显示） */}
+        {/* 会员引导卡片（免费章末尾，且未订阅时显示） */}
         {isFreeChapter && !hasSubscription && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center animate-in fade-in-50 slide-in-from-bottom-10 duration-700">
             <div className="text-3xl mb-3">🌹</div>
