@@ -1,8 +1,6 @@
 import type { Config } from "tailwindcss"
-const { fontFamily } = require("tailwindcss/defaultTheme")
 
-const config = {
-  darkMode: ["class"],
+const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
@@ -11,23 +9,37 @@ const config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#C9A96E", // 金色
-          foreground: "#0B0A0F",
+          DEFAULT: "#D47B8C", // 豆沙粉/玫瑰金
+          foreground: "#FFFFFF",
         },
         card: {
-          DEFAULT: "#1A1721",
-          foreground: "#F3F0E9",
+          DEFAULT: "#FFFFFF",
+          foreground: "#3D2C2E", // 深棕，温柔不刺眼
+        },
+        muted: {
+          DEFAULT: "#FDF2F4", // 极浅粉底
+          foreground: "#A97C85",
+        },
+        accent: {
+          DEFAULT: "#F4E1E4", // 柔和点缀色
+          foreground: "#6D4C55",
         },
       },
       fontFamily: {
         serif: ["Playfair Display", "serif"],
-        sans: ["Inter", ...fontFamily.sans],
+        sans: ["Inter", "sans-serif"],
+        reading: ["Lora", "Merriweather", "serif"], // 阅读器专用
       },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-      }
+      borderRadius: {
+        xl: "1rem",
+        "2xl": "1.5rem",
+      },
+      boxShadow: {
+        card: "0 4px 20px rgba(0,0,0,0.04)",
+        "card-hover": "0 12px 30px rgba(0,0,0,0.08)",
+      },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [],
 }
 export default config
