@@ -23,9 +23,11 @@ export default function ReadPage() {
   const [loading, setLoading] = useState(true)
   const [fontSize, setFontSize] = useState(18)
   const [bgMode, setBgMode] = useState<keyof typeof BG_STYLES>('warm')
+  const [hasSubscription, setHasSubscription] = useState(false) // 新增
 
   useEffect(() => {
     const checkAccess = async () => {
+      // 1. 获取章节和关联小说
       const { data: chapterData, error: chapterError } = await supabase
         .from('chapters')
         .select('*, novel:novel_id(*)')
@@ -40,30 +42,40 @@ export default function ReadPage() {
       setChapter(chapterData)
       setNovel(chapterData.novel)
 
-      if (!chapterData.is_locked) {
-        setCanRead(true)
-        setLoading(false)
-        return
-      }
-
+      // 2. 获取当前用户及订阅状态（无论免费还是付费章节）
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
-      if (!currentUser) {
-        router.push('/pricing?message=Please login')
-        return
+
+      let subscribed = false
+      if (currentUser) {
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('status, current_period_end')
+          .eq('user_id', currentUser.id)
+          .single()
+        if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
+          subscribed = true
+        }
       }
+      setHasSubscription(subscribed)
 
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('status, current_period_end')
-        .eq('user_id', currentUser.id)
-        .single()
-
-      if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
+      // 3. 判断阅读权限
+      if (!chapterData.is_locked) {
+        // 免费章节所有人可读
         setCanRead(true)
       } else {
-        router.push('/pricing?message=Subscribe to read')
+        // 付费章节：需要订阅
+        if (!currentUser) {
+          router.push('/pricing?message=Please login to read')
+          return
+        }
+        if (!subscribed) {
+          router.push('/pricing?message=Subscribe to unlock this chapter')
+          return
+        }
+        setCanRead(true)
       }
+
       setLoading(false)
     }
 
@@ -93,6 +105,7 @@ export default function ReadPage() {
 
   const paragraphs = chapter.content?.split('\n').filter(Boolean) || []
   const currentIndex = chapter.order_num
+  const isFreeChapter = !chapter.is_locked
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
@@ -128,6 +141,24 @@ export default function ReadPage() {
         {paragraphs.map((p: string, i: number) => (
           <p key={i} className="mb-4">{p}</p>
         ))}
+
+        {/* 会员引导卡片（仅当免费章节 + 用户未订阅时显示） */}
+        {isFreeChapter && !hasSubscription && (
+          <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center animate-in fade-in-50 slide-in-from-bottom-10 duration-700">
+            <div className="text-3xl mb-3">🌹</div>
+            <h3 className="text-xl font-serif text-foreground mb-2">Loved this story?</h3>
+            <p className="text-foreground/60 text-sm mb-5 max-w-xs mx-auto">
+              Unlock all chapters and binge-read your favorite romance tales.
+            </p>
+            <Link
+              href="/pricing"
+              className="inline-block bg-primary text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-primary/90 transition shadow-md hover:shadow-lg"
+            >
+              Subscribe Now — from $2.99/week
+            </Link>
+            <p className="text-xs text-foreground/40 mt-3">Cancel anytime. No commitment.</p>
+          </div>
+        )}
       </article>
 
       {/* 底部导航 */}
