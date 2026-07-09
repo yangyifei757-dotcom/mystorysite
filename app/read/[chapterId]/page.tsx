@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 
-const FONT_SIZES = [16, 18, 20, 22, 24] as const
+const FONT_SIZES = [16, 18, 20, 22, 24]
 const BG_STYLES = {
   warm: 'bg-[#FDFAF6] text-[#3D2C2E]',
   sepia: 'bg-[#F5ECD7] text-[#4A3B2F]',
@@ -26,16 +26,17 @@ export default function ReadPage() {
 
   useEffect(() => {
     const checkAccess = async () => {
-      const { data: chapterData } = await supabase
+      const { data: chapterData, error: chapterError } = await supabase
         .from('chapters')
         .select('*, novel:novel_id(*)')
         .eq('id', chapterId)
         .single()
 
-      if (!chapterData) {
+      if (chapterError || !chapterData) {
         setLoading(false)
         return
       }
+
       setChapter(chapterData)
       setNovel(chapterData.novel)
 
@@ -69,45 +70,29 @@ export default function ReadPage() {
     checkAccess()
   }, [chapterId, router])
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-foreground/50">Loading chapter...</div>
-  if (!chapter) return <div className="min-h-screen flex items-center justify-center text-foreground/50">Chapter not found</div>
+  const goToChapter = async (orderNum: number) => {
+    if (!novel?.id) return
+    const { data } = await supabase
+      .from('chapters')
+      .select('id')
+      .eq('novel_id', novel.id)
+      .eq('order_num', orderNum)
+      .single()
+    if (data?.id) router.push(`/read/${data.id}`)
+  }
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-foreground/50">Loading chapter...</div>
+  }
+
+  if (!chapter) {
+    return <div className="min-h-screen flex items-center justify-center text-foreground/50">Chapter not found</div>
+  }
+
   if (!canRead) return null
 
-  const currentIndex = chapter.order_num
   const paragraphs = chapter.content?.split('\n').filter(Boolean) || []
-
-  const goToPrev = () => {
-    if (currentIndex > 1) {
-      const prevChapterId = getAdjacentChapterId(currentIndex - 1)
-      if (prevChapterId) router.push(`/read/${prevChapterId}`)
-    }
-  }
-
-  const goToNext = () => {
-    const nextChapterId = getAdjacentChapterId(currentIndex + 1)
-    if (nextChapterId) router.push(`/read/${nextChapterId}`)
-  }
-
-  // 简化：直接从当前获取所有章节ID（或可改进为缓存）
-  const [chapterIds, setChapterIds] = useState<string[]>([])
-  useEffect(() => {
-    if (!novel?.id) return
-    supabase
-      .from('chapters')
-      .select('id, order_num')
-      .eq('novel_id', novel.id)
-      .order('order_num', { ascending: true })
-      .then(({ data }) => {
-        if (data) setChapterIds(data.map(c => c.id))
-      })
-  }, [novel?.id])
-
-  const getAdjacentChapterId = (order: number) => {
-    // 需要从已获取的章节列表找到对应 order_num 的 ID
-    // 这里简化处理，直接刷新到目标章节需要再从数据库获取一次（可改进为本地映射）
-    // 为了保证功能，我们在此不做本地映射，直接 fetch
-    return null // 暂时用下方手动实现
-  }
+  const currentIndex = chapter.order_num
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
@@ -145,20 +130,10 @@ export default function ReadPage() {
         ))}
       </article>
 
-      {/* 底部导航栏 */}
+      {/* 底部导航 */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border px-4 py-3 flex justify-between items-center">
         <button
-          onClick={async () => {
-            // 获取上一章ID
-            if (!novel?.id || currentIndex <= 1) return
-            const { data } = await supabase
-              .from('chapters')
-              .select('id')
-              .eq('novel_id', novel.id)
-              .eq('order_num', currentIndex - 1)
-              .single()
-            if (data?.id) router.push(`/read/${data.id}`)
-          }}
+          onClick={() => goToChapter(currentIndex - 1)}
           disabled={currentIndex <= 1}
           className="px-4 py-2 text-sm rounded-full border border-primary/30 text-primary disabled:opacity-30 hover:bg-primary/5 transition"
         >
@@ -166,16 +141,7 @@ export default function ReadPage() {
         </button>
         <span className="text-xs text-foreground/50">Ch. {currentIndex}</span>
         <button
-          onClick={async () => {
-            if (!novel?.id) return
-            const { data } = await supabase
-              .from('chapters')
-              .select('id')
-              .eq('novel_id', novel.id)
-              .eq('order_num', currentIndex + 1)
-              .single()
-            if (data?.id) router.push(`/read/${data.id}`)
-          }}
+          onClick={() => goToChapter(currentIndex + 1)}
           className="px-4 py-2 text-sm rounded-full bg-primary text-white hover:bg-primary/90 transition"
         >
           Next →
