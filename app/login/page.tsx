@@ -32,16 +32,6 @@ export default function LoginPage() {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) {
       setMessage(error.message)
-    } else if (data?.user?.id) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({ id: data.user.id, email: email })
-      if (profileError) {
-        console.error('Profile creation failed:', profileError)
-        setMessage('Account created but profile setup failed. Please contact support.')
-      } else {
-        setMessage('Registration successful! You can now log in.')
-      }
     } else {
       setMessage('Registration successful! You can now log in.')
     }
