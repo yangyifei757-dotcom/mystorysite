@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabaseClient'
 import { useEffect, useState } from 'react'
 
@@ -52,9 +53,15 @@ export default function Home() {
             <div className="flex transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
               {bannerNovels.map((novel: any) => (
                 <Link key={novel.id} href={`/novel/${novel.id}`} className="w-full flex-shrink-0 flex flex-col md:flex-row items-center p-6 md:p-10">
-                  <div className="w-32 md:w-40 aspect-[3/4] rounded-xl overflow-hidden shadow-lg mb-4 md:mb-0 md:mr-8">
+                  <div className="w-32 md:w-40 aspect-[3/4] rounded-xl overflow-hidden shadow-lg mb-4 md:mb-0 md:mr-8 relative">
                     {novel.cover_url ? (
-                      <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover" />
+                      <Image
+                        src={novel.cover_url}
+                        alt={novel.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 128px, 160px"
+                      />
                     ) : (
                       <div className="h-full w-full bg-accent flex items-center justify-center text-3xl text-primary">{novel.title?.charAt(0)}</div>
                     )}
@@ -119,12 +126,18 @@ export default function Home() {
               <Link key={novel.id} href={`/novel/${novel.id}`} className="group flex flex-col">
                 <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300">
                   {novel.cover_url ? (
-                    <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <Image
+                      src={novel.cover_url}
+                      alt={novel.title}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                    />
                   ) : (
                     <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
                   )}
                   {novel.tags?.[0] && (
-                    <span className="absolute top-2 left-2 bg-white/90 text-foreground text-[10px] px-1.5 py-0.5 rounded-md shadow">{novel.tags[0]}</span>
+                    <span className="absolute top-2 left-2 bg-white/90 text-foreground text-[10px] px-1.5 py-0.5 rounded-md shadow z-10">{novel.tags[0]}</span>
                   )}
                 </div>
                 <div className="mt-2 px-1">
@@ -137,7 +150,6 @@ export default function Home() {
         )}
       </section>
 
-      {/* 这里保留了隐私政策和服务条款，移除了退款政策 */}
       <div className="max-w-6xl mx-auto px-4 pb-6 flex justify-center gap-6 text-xs text-foreground/40">
         <Link href="/privacy-policy" className="hover:text-primary transition">Privacy Policy</Link>
         <Link href="/terms-of-service" className="hover:text-primary transition">Terms of Service</Link>
