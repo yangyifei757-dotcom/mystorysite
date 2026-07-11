@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import Link from 'next/link'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -95,7 +96,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* 邮箱登录 */}
+        {/* 邮箱登录表单 */}
         <form onSubmit={handleEmailLogin} className="space-y-4">
           <input
             type="email"
@@ -121,6 +122,11 @@ export default function LoginPage() {
             {loading ? 'Loading...' : 'Sign In with Email'}
           </button>
         </form>
+
+        {/* 忘记密码链接 */}
+        <p className="text-center text-sm text-foreground/50">
+          <Link href="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
+        </p>
 
         <p className="text-center text-sm text-foreground/50">
           No account?{' '}
