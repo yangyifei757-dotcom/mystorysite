@@ -26,7 +26,6 @@ export default function Home() {
     fetchData()
   }, [])
 
-  // 轮播自动切换
   useEffect(() => {
     if (novels.length === 0) return
     const timer = setInterval(() => {
@@ -35,53 +34,23 @@ export default function Home() {
     return () => clearInterval(timer)
   }, [novels])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    window.location.reload()
-  }
-
-  const handleManageSubscription = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token
-    if (!token) {
-      alert('You must be logged in to manage your subscription.')
-      return
-    }
-    const res = await fetch('/api/portal', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    const data = await res.json()
-    if (data.url) {
-      window.location.href = data.url
-    } else {
-      alert('Could not open subscription management.')
-    }
-  }
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading...</div>
-
   const bannerNovels = novels.slice(0, 3)
 
   return (
-    <main className="min-h-screen bg-background">
-      {/* 导航栏 */}
+    <main className="min-h-screen bg-background pb-20">
+      {/* 顶部导航（简化） */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="text-2xl font-serif text-primary tracking-wide hover:opacity-80 transition">
             IvyNovel
           </Link>
-          <nav className="flex items-center gap-4 text-sm text-foreground/70">
-            <Link href="/pricing" className="hover:text-primary transition">Pricing</Link>
+          <nav className="flex items-center gap-4 text-sm">
             {user ? (
               <div className="flex items-center gap-3">
+                <Link href="/library" className="hover:text-primary transition">Library</Link>
                 <span className="text-xs bg-accent text-accent-foreground px-2 py-1 rounded-full">
                   {user.email}
                 </span>
-                <button onClick={handleManageSubscription} className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full hover:bg-primary/20 transition">
-                  Manage Subscription
-                </button>
-                <button onClick={handleLogout} className="hover:text-primary transition">Logout</button>
               </div>
             ) : (
               <Link href="/login" className="hover:text-primary transition">Sign In</Link>
@@ -90,12 +59,12 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Banner */}
+      {/* Banner */}
       {bannerNovels.length > 0 && (
         <section className="pt-20 pb-8 px-4">
-          <div className="max-w-6xl mx-auto relative overflow-hidden rounded-2xl shadow-card" style={{ backgroundColor: '#FCF7F8' }}>
+          <div className="max-w-6xl mx-auto relative overflow-hidden rounded-2xl shadow-card bg-[#FCF7F8]">
             <div className="flex transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-              {bannerNovels.map((novel: any, idx: number) => (
+              {bannerNovels.map((novel: any) => (
                 <Link key={novel.id} href={`/novel/${novel.id}`} className="w-full flex-shrink-0 flex flex-col md:flex-row items-center p-6 md:p-10">
                   <div className="w-32 md:w-40 aspect-[3/4] rounded-xl overflow-hidden shadow-lg mb-4 md:mb-0 md:mr-8">
                     {novel.cover_url ? (
@@ -109,14 +78,13 @@ export default function Home() {
                     <h2 className="text-2xl md:text-4xl font-serif text-foreground mb-1">{novel.title}</h2>
                     <p className="text-foreground/60 text-sm mb-3">by {novel.author}</p>
                     <p className="text-foreground/70 text-sm line-clamp-2 mb-4">{novel.description}</p>
-                    <span className="inline-block bg-primary text-primary-foreground px-5 py-2 rounded-full text-sm font-medium hover:bg-primary/90 transition">
+                    <span className="inline-block bg-primary text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-primary/90 transition">
                       Start Reading
                     </span>
                   </div>
                 </Link>
               ))}
             </div>
-            {/* 轮播指示点 */}
             {bannerNovels.length > 1 && (
               <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
                 {bannerNovels.map((_, idx) => (
@@ -132,13 +100,11 @@ export default function Home() {
         </section>
       )}
 
-      {/* You May Like */}
-      <section className="max-w-6xl mx-auto px-4 pb-16">
+      {/* You May Like 网格 */}
+      <section className="max-w-6xl mx-auto px-4 pb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl md:text-3xl font-serif text-foreground">You May Like</h2>
-          <Link href="#" className="text-sm text-primary hover:underline">View All</Link>
         </div>
-
         {novels.length === 0 ? (
           <div className="text-center py-20 text-foreground/40 bg-card rounded-2xl shadow-card">
             <p className="text-lg">✨ Our stories are brewing...</p>
@@ -154,11 +120,8 @@ export default function Home() {
                   ) : (
                     <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
                   )}
-                  {/* 标签 */}
                   {novel.tags?.[0] && (
-                    <span className="absolute top-2 left-2 bg-white/90 text-foreground text-[10px] px-1.5 py-0.5 rounded-md shadow">
-                      {novel.tags[0]}
-                    </span>
+                    <span className="absolute top-2 left-2 bg-white/90 text-foreground text-[10px] px-1.5 py-0.5 rounded-md shadow">{novel.tags[0]}</span>
                   )}
                 </div>
                 <div className="mt-2 px-1">
@@ -170,6 +133,30 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* 底部导航栏（固定） */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border z-50">
+        <div className="max-w-lg mx-auto flex justify-around py-2">
+          <Link href="/library" className="flex flex-col items-center text-xs text-foreground/60 hover:text-primary transition">
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
+            </svg>
+            Library
+          </Link>
+          <Link href="/" className="flex flex-col items-center text-xs text-primary font-medium">
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            Discovery
+          </Link>
+          <Link href={user ? "/mine" : "/login"} className="flex flex-col items-center text-xs text-foreground/60 hover:text-primary transition">
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            {user ? 'Mine' : 'Sign In'}
+          </Link>
+        </div>
+      </nav>
     </main>
   )
 }
