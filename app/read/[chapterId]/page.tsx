@@ -24,10 +24,11 @@ export default function ReadPage() {
   const [fontSize, setFontSize] = useState(18)
   const [bgMode, setBgMode] = useState<keyof typeof BG_STYLES>('warm')
   const [hasSubscription, setHasSubscription] = useState(false)
+  const [isLastFreeChapter, setIsLastFreeChapter] = useState(false)
 
   useEffect(() => {
     const checkAccess = async () => {
-      // 1. 获取章节和关联小说
+      // 1. 获取当前章节和小说信息
       const { data: chapterData, error: chapterError } = await supabase
         .from('chapters')
         .select('*, novel:novel_id(*)')
@@ -42,7 +43,22 @@ export default function ReadPage() {
       setChapter(chapterData)
       setNovel(chapterData.novel)
 
-      // 2. 获取当前用户及订阅状态
+      // 2. 获取当前小说所有章节（用于判断最后免费章）
+      const { data: allChapters } = await supabase
+        .from('chapters')
+        .select('id, is_locked, order_num')
+        .eq('novel_id', chapterData.novel.id)
+        .order('order_num', { ascending: true })
+
+      if (allChapters) {
+        // 找到最后一个 is_locked === false 的章节
+        const lastFree = allChapters.filter(ch => !ch.is_locked).pop()
+        if (lastFree && lastFree.id === chapterId) {
+          setIsLastFreeChapter(true)
+        }
+      }
+
+      // 3. 获取当前用户及订阅状态
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
 
@@ -52,7 +68,7 @@ export default function ReadPage() {
         await supabase.from('reading_progress').upsert({
           user_id: currentUser.id,
           chapter_id: chapterId,
-          progress: 0, // 可以后续扩展为百分比
+          progress: 0,
           updated_at: new Date().toISOString(),
         })
 
@@ -67,7 +83,7 @@ export default function ReadPage() {
       }
       setHasSubscription(subscribed)
 
-      // 3. 判断阅读权限
+      // 4. 判断阅读权限
       if (!chapterData.is_locked) {
         setCanRead(true)
       } else {
@@ -111,7 +127,9 @@ export default function ReadPage() {
 
   const paragraphs = chapter.content?.split('\n').filter(Boolean) || []
   const currentIndex = chapter.order_num
-  const isFreeChapter = !chapter.is_locked
+
+  // 只有同时满足：是免费章节、是最后一章免费章节、用户未订阅时，才显示会员引导
+  const showSubscriptionCard = !chapter.is_locked && isLastFreeChapter && !hasSubscription
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
@@ -148,9 +166,9 @@ export default function ReadPage() {
           <p key={i} className="mb-4">{p}</p>
         ))}
 
-        {/* 会员引导卡片（免费章末尾，且未订阅时显示） */}
-        {isFreeChapter && !hasSubscription && (
-          <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center animate-in fade-in-50 slide-in-from-bottom-10 duration-700">
+        {/* 会员引导卡片：仅在最后一章免费章节末尾显示，且用户未订阅 */}
+        {showSubscriptionCard && (
+          <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
             <h3 className="text-xl font-serif text-foreground mb-2">Loved this story?</h3>
             <p className="text-foreground/60 text-sm mb-5 max-w-xs mx-auto">
