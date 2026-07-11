@@ -38,24 +38,12 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background pb-20">
-      {/* 顶部导航（简化） */}
+      {/* 极简顶部 */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-center">
           <Link href="/" className="text-2xl font-serif text-primary tracking-wide hover:opacity-80 transition">
             IvyNovel
           </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <Link href="/library" className="hover:text-primary transition">Library</Link>
-                <span className="text-xs bg-accent text-accent-foreground px-2 py-1 rounded-full">
-                  {user.email}
-                </span>
-              </div>
-            ) : (
-              <Link href="/login" className="hover:text-primary transition">Sign In</Link>
-            )}
-          </nav>
         </div>
       </header>
 
@@ -134,7 +122,7 @@ export default function Home() {
         )}
       </section>
 
-      {/* 底部导航栏（固定） */}
+      {/* 底部导航栏 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border z-50">
         <div className="max-w-lg mx-auto flex justify-around py-2">
           <Link href="/library" className="flex flex-col items-center text-xs text-foreground/60 hover:text-primary transition">
