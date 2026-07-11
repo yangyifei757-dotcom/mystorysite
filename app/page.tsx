@@ -39,19 +39,19 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background pb-20">
-      {/* 顶部导航：Logo + 文字 */}
+      {/* 顶部导航：Logo + 文字，已修复文字可见性 */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-center">
           <Link href="/" className="flex items-center gap-3">
             <Image
-              src="/logo.png"           // 👈 如果你替换了文件，请确保文件名一致
+              src="/logo.png"
               alt="IvyNovel Logo"
-              width={180}               // 根据实际 Logo 宽度调整
-              height={60}               // 高度增大，让 Logo 更清晰
-              className="h-12 w-auto"   // 固定高度 48px，宽度自适应（可改成 h-14 即 56px）
+              width={180}
+              height={60}
+              className="h-12 w-auto"
               priority
             />
-            <span className="text-2xl font-serif text-primary tracking-wide">
+            <span className="text-2xl font-serif text-foreground tracking-wide">
               IvyNovel
             </span>
           </Link>
