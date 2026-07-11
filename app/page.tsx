@@ -39,14 +39,23 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background pb-20">
+      {/* 顶部导航栏（Logo 图片替代文字） */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-center">
-          <Link href="/" className="text-2xl font-serif text-primary tracking-wide hover:opacity-80 transition">
-            IvyNovel
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/logo.png"          // 👈 如果你的文件不是 logo.png，请改成实际文件名，例如 /logo.svg
+              alt="IvyNovel"
+              width={140}               // 根据实际 Logo 宽度调整
+              height={40}               // 根据实际高度调整
+              className="h-10 w-auto"   // 保持比例，高度固定 40px
+              priority                  // 优先加载
+            />
           </Link>
         </div>
       </header>
 
+      {/* Hero Banner */}
       {bannerNovels.length > 0 && (
         <section className="pt-20 pb-8 px-4">
           <div className="max-w-6xl mx-auto relative overflow-hidden rounded-2xl shadow-card bg-[#FCF7F8]">
@@ -93,6 +102,7 @@ export default function Home() {
         </section>
       )}
 
+      {/* 搜索栏 */}
       <div className="max-w-6xl mx-auto px-4 pb-6">
         <form onSubmit={(e) => {
           e.preventDefault()
@@ -111,6 +121,7 @@ export default function Home() {
         </form>
       </div>
 
+      {/* You May Like 区域 */}
       <section className="max-w-6xl mx-auto px-4 pb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl md:text-3xl font-serif text-foreground">You May Like</h2>
@@ -150,11 +161,13 @@ export default function Home() {
         )}
       </section>
 
+      {/* Footer 法律链接 */}
       <div className="max-w-6xl mx-auto px-4 pb-6 flex justify-center gap-6 text-xs text-foreground/40">
         <Link href="/privacy-policy" className="hover:text-primary transition">Privacy Policy</Link>
         <Link href="/terms-of-service" className="hover:text-primary transition">Terms of Service</Link>
       </div>
 
+      {/* 底部导航栏 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border z-50">
         <div className="max-w-lg mx-auto flex justify-around py-2">
           <Link href="/library" className="flex flex-col items-center text-xs text-foreground/60 hover:text-primary transition">
