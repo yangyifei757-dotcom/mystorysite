@@ -39,18 +39,21 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background pb-20">
-      {/* 顶部导航栏（Logo 图片替代文字） */}
+      {/* 顶部导航：Logo + 文字 */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-center">
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center gap-3">
             <Image
-              src="/logo.png"          // 👈 如果你的文件不是 logo.png，请改成实际文件名，例如 /logo.svg
-              alt="IvyNovel"
-              width={140}               // 根据实际 Logo 宽度调整
-              height={40}               // 根据实际高度调整
-              className="h-10 w-auto"   // 保持比例，高度固定 40px
-              priority                  // 优先加载
+              src="/logo.png"           // 👈 如果你替换了文件，请确保文件名一致
+              alt="IvyNovel Logo"
+              width={180}               // 根据实际 Logo 宽度调整
+              height={60}               // 高度增大，让 Logo 更清晰
+              className="h-12 w-auto"   // 固定高度 48px，宽度自适应（可改成 h-14 即 56px）
+              priority
             />
+            <span className="text-2xl font-serif text-primary tracking-wide">
+              IvyNovel
+            </span>
           </Link>
         </div>
       </header>
