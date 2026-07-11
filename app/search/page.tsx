@@ -3,9 +3,9 @@
 import { Suspense, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 
-// 将实际搜索逻辑提取到内部组件
 function SearchResults() {
   const searchParams = useSearchParams()
   const query = searchParams.get('q') || ''
@@ -48,7 +48,13 @@ function SearchResults() {
             <Link key={novel.id} href={`/novel/${novel.id}`} className="group flex flex-col">
               <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all">
                 {novel.cover_url ? (
-                  <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
+                  <Image
+                    src={novel.cover_url}
+                    alt={novel.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform"
+                    sizes="(max-width: 640px) 50vw, 25vw"
+                  />
                 ) : (
                   <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
                 )}
@@ -65,7 +71,6 @@ function SearchResults() {
   )
 }
 
-// 页面组件用 Suspense 包裹
 export default function SearchPage() {
   return (
     <main className="min-h-screen bg-background pt-24 pb-20 px-4">
