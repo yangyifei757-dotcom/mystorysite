@@ -18,15 +18,28 @@ export default function LibraryPage() {
         return
       }
 
+      // 获取该用户所有阅读进度，按更新时间倒序
       const { data, error } = await supabase
         .from('reading_progress')
         .select('*, chapter:chapter_id(*, novel:novel_id(*))')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
 
-      if (!error && data) {
-        setItems(data)
+      if (error || !data) {
+        setLoading(false)
+        return
       }
+
+      // 去重：每部小说只保留最近阅读的一条记录
+      const novelMap = new Map<string, any>()
+      data.forEach((item: any) => {
+        const novelId = item.chapter?.novel?.id
+        if (novelId && !novelMap.has(novelId)) {
+          novelMap.set(novelId, item)
+        }
+      })
+
+      setItems(Array.from(novelMap.values()))
       setLoading(false)
     }
 
@@ -38,7 +51,7 @@ export default function LibraryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background pt-24 pb-16 px-4">
+    <main className="min-h-screen bg-background pt-24 pb-20 px-4">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-serif text-foreground mb-8">📚 My Library</h1>
 
@@ -53,40 +66,25 @@ export default function LibraryPage() {
         ) : (
           <div className="space-y-4">
             {items.map((item: any) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition"
-              >
+              <div key={item.id} className="flex items-center gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition">
                 <div className="w-12 h-16 rounded-md overflow-hidden flex-shrink-0 bg-accent">
                   {item.chapter?.novel?.cover_url ? (
-                    <img
-                      src={item.chapter.novel.cover_url}
-                      alt={item.chapter.novel.title}
-                      className="h-full w-full object-cover"
-                    />
+                    <img src={item.chapter.novel.cover_url} alt={item.chapter.novel.title} className="h-full w-full object-cover" />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-primary font-serif text-lg">
                       {item.chapter?.novel?.title?.charAt(0) || '?'}
                     </div>
                   )}
                 </div>
-
                 <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/novel/${item.chapter?.novel?.id}`}
-                    className="font-serif text-foreground hover:text-primary transition line-clamp-1"
-                  >
+                  <Link href={`/novel/${item.chapter?.novel?.id}`} className="font-serif text-foreground hover:text-primary transition line-clamp-1">
                     {item.chapter?.novel?.title || 'Unknown Novel'}
                   </Link>
                   <p className="text-xs text-foreground/50 mt-1">
                     {item.chapter?.title || 'Chapter'} · Last read {new Date(item.updated_at).toLocaleDateString()}
                   </p>
                 </div>
-
-                <Link
-                  href={`/read/${item.chapter_id}`}
-                  className="flex-shrink-0 text-sm bg-primary text-white px-4 py-2 rounded-full hover:bg-primary/90 transition"
-                >
+                <Link href={`/read/${item.chapter_id}`} className="flex-shrink-0 text-sm bg-primary text-white px-4 py-2 rounded-full hover:bg-primary/90 transition">
                   Continue
                 </Link>
               </div>
