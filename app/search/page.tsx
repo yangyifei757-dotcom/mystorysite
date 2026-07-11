@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
-export default function SearchPage() {
+// 将实际搜索逻辑提取到内部组件
+function SearchResults() {
   const searchParams = useSearchParams()
   const query = searchParams.get('q') || ''
   const [results, setResults] = useState<any[]>([])
@@ -32,36 +33,45 @@ export default function SearchPage() {
   }, [query])
 
   return (
-    <main className="min-h-screen bg-background pt-24 pb-20 px-4">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-serif text-foreground mb-6">
-          {query ? `Results for "${query}"` : 'Search'}
-        </h1>
+    <div className="max-w-4xl mx-auto">
+      <h1 className="text-2xl font-serif text-foreground mb-6">
+        {query ? `Results for "${query}"` : 'Search'}
+      </h1>
 
-        {loading ? (
-          <p className="text-foreground/40">Searching...</p>
-        ) : results.length === 0 ? (
-          <p className="text-foreground/40">No novels found. Try a different keyword.</p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {results.map((novel: any) => (
-              <Link key={novel.id} href={`/novel/${novel.id}`} className="group flex flex-col">
-                <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all">
-                  {novel.cover_url ? (
-                    <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
-                  ) : (
-                    <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
-                  )}
-                </div>
-                <div className="mt-2 px-1">
-                  <h3 className="font-serif text-sm font-medium line-clamp-1">{novel.title}</h3>
-                  <p className="text-xs text-foreground/50">{novel.author}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+      {loading ? (
+        <p className="text-foreground/40">Searching...</p>
+      ) : results.length === 0 ? (
+        <p className="text-foreground/40">No novels found. Try a different keyword.</p>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          {results.map((novel: any) => (
+            <Link key={novel.id} href={`/novel/${novel.id}`} className="group flex flex-col">
+              <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all">
+                {novel.cover_url ? (
+                  <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
+                ) : (
+                  <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
+                )}
+              </div>
+              <div className="mt-2 px-1">
+                <h3 className="font-serif text-sm font-medium line-clamp-1">{novel.title}</h3>
+                <p className="text-xs text-foreground/50">{novel.author}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 页面组件用 Suspense 包裹
+export default function SearchPage() {
+  return (
+    <main className="min-h-screen bg-background pt-24 pb-20 px-4">
+      <Suspense fallback={<div className="text-foreground/40">Loading search...</div>}>
+        <SearchResults />
+      </Suspense>
     </main>
   )
 }
