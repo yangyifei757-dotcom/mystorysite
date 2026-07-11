@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useParams } from 'next/navigation'
 
 export default function NovelPage() {
@@ -26,6 +27,7 @@ export default function NovelPage() {
 
       setNovel(novelData)
       setChapters(chaptersData || [])
+      if (novelData) document.title = `${novelData.title} - IvyNovel`
 
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
@@ -48,16 +50,24 @@ export default function NovelPage() {
     fetchData()
   }, [id])
 
-  if (loading) return <div className="text-white p-20 text-center">Loading...</div>
-  if (!novel) return <div className="text-white p-20 text-center">Novel not found</div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-foreground/50">Loading...</div>
+  if (!novel) return <div className="min-h-screen flex items-center justify-center text-foreground/50">Novel not found</div>
 
   return (
     <main className="min-h-screen bg-background pt-24 pb-16 px-4">
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-10">
         <div className="w-full md:w-1/3">
-          <div className="rounded-2xl overflow-hidden shadow-2xl aspect-[3/4] bg-card">
-            {novel.cover_url && (
-              <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover" />
+          <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-card">
+            {novel.cover_url ? (
+              <Image
+                src={novel.cover_url}
+                alt={novel.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 33vw"
+              />
+            ) : (
+              <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
             )}
           </div>
         </div>
@@ -87,7 +97,7 @@ export default function NovelPage() {
                     )}
                   </div>
                   {canAccess ? (
-                    <Link href={`/read/${chapter.id}`} className="text-sm bg-primary text-background px-4 py-1 rounded-full hover:bg-primary/90 transition">
+                    <Link href={`/read/${chapter.id}`} className="text-sm bg-primary text-white px-4 py-1 rounded-full hover:bg-primary/90 transition">
                       Read
                     </Link>
                   ) : (
