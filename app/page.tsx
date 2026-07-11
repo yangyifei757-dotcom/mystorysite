@@ -38,7 +38,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background pb-20">
-      {/* 极简顶部 */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-center">
           <Link href="/" className="text-2xl font-serif text-primary tracking-wide hover:opacity-80 transition">
@@ -47,7 +46,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Banner */}
       {bannerNovels.length > 0 && (
         <section className="pt-20 pb-8 px-4">
           <div className="max-w-6xl mx-auto relative overflow-hidden rounded-2xl shadow-card bg-[#FCF7F8]">
@@ -88,7 +86,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* 搜索栏 */}
       <div className="max-w-6xl mx-auto px-4 pb-6">
         <form onSubmit={(e) => {
           e.preventDefault()
@@ -107,7 +104,6 @@ export default function Home() {
         </form>
       </div>
 
-      {/* You May Like 网格 */}
       <section className="max-w-6xl mx-auto px-4 pb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl md:text-3xl font-serif text-foreground">You May Like</h2>
@@ -141,14 +137,12 @@ export default function Home() {
         )}
       </section>
 
-      {/* Footer 法律链接 */}
+      {/* 这里保留了隐私政策和服务条款，移除了退款政策 */}
       <div className="max-w-6xl mx-auto px-4 pb-6 flex justify-center gap-6 text-xs text-foreground/40">
         <Link href="/privacy-policy" className="hover:text-primary transition">Privacy Policy</Link>
         <Link href="/terms-of-service" className="hover:text-primary transition">Terms of Service</Link>
-        <Link href="/refund-policy" className="hover:text-primary transition">Refund Policy</Link>
       </div>
 
-      {/* 底部导航栏 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border z-50">
         <div className="max-w-lg mx-auto flex justify-around py-2">
           <Link href="/library" className="flex flex-col items-center text-xs text-foreground/60 hover:text-primary transition">
