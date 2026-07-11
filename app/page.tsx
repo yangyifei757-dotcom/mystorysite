@@ -88,6 +88,25 @@ export default function Home() {
         </section>
       )}
 
+      {/* 搜索栏 */}
+      <div className="max-w-6xl mx-auto px-4 pb-6">
+        <form onSubmit={(e) => {
+          e.preventDefault()
+          const q = (e.target as any).q.value
+          if (q.trim()) window.location.href = `/search?q=${encodeURIComponent(q.trim())}`
+        }} className="flex gap-2">
+          <input
+            type="text"
+            name="q"
+            placeholder="Search novels or authors..."
+            className="flex-1 p-3 rounded-xl border border-border bg-white text-foreground text-sm focus:outline-none focus:border-primary"
+          />
+          <button type="submit" className="px-5 py-3 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition">
+            Search
+          </button>
+        </form>
+      </div>
+
       {/* You May Like 网格 */}
       <section className="max-w-6xl mx-auto px-4 pb-8">
         <div className="flex items-center justify-between mb-6">
@@ -121,6 +140,13 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* Footer 法律链接 */}
+      <div className="max-w-6xl mx-auto px-4 pb-6 flex justify-center gap-6 text-xs text-foreground/40">
+        <Link href="/privacy-policy" className="hover:text-primary transition">Privacy Policy</Link>
+        <Link href="/terms-of-service" className="hover:text-primary transition">Terms of Service</Link>
+        <Link href="/refund-policy" className="hover:text-primary transition">Refund Policy</Link>
+      </div>
 
       {/* 底部导航栏 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border z-50">
