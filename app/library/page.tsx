@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
 export default function LibraryPage() {
@@ -18,7 +19,6 @@ export default function LibraryPage() {
         return
       }
 
-      // 获取该用户所有阅读进度，按更新时间倒序
       const { data, error } = await supabase
         .from('reading_progress')
         .select('*, chapter:chapter_id(*, novel:novel_id(*))')
@@ -30,7 +30,6 @@ export default function LibraryPage() {
         return
       }
 
-      // 去重：每部小说只保留最近阅读的一条记录
       const novelMap = new Map<string, any>()
       data.forEach((item: any) => {
         const novelId = item.chapter?.novel?.id
@@ -67,9 +66,15 @@ export default function LibraryPage() {
           <div className="space-y-4">
             {items.map((item: any) => (
               <div key={item.id} className="flex items-center gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition">
-                <div className="w-12 h-16 rounded-md overflow-hidden flex-shrink-0 bg-accent">
+                <div className="w-12 h-16 rounded-md overflow-hidden flex-shrink-0 bg-accent relative">
                   {item.chapter?.novel?.cover_url ? (
-                    <img src={item.chapter.novel.cover_url} alt={item.chapter.novel.title} className="h-full w-full object-cover" />
+                    <Image
+                      src={item.chapter.novel.cover_url}
+                      alt={item.chapter.novel.title}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-primary font-serif text-lg">
                       {item.chapter?.novel?.title?.charAt(0) || '?'}
