@@ -5,14 +5,14 @@ export default function PricingPage() {
       price: '$2.99',
       interval: 'week',
       description: 'Billed weekly',
-      stripeLink: 'https://buy.stripe.com/test_你的周订阅链接',
+      stripeLink: 'https://buy.stripe.com/test_https://buy.stripe.com/test_dRmdR9dgl7gve3GftYdwc00',
     },
     {
       name: 'Monthly',
       price: '$4.99',
       interval: 'month',
       description: 'First month, then $9.99/month',
-      stripeLink: 'https://buy.stripe.com/test_你的月订阅链接（已添加优惠券）',
+      stripeLink: 'https://buy.stripe.com/test_https://buy.stripe.com/test_cNiaEX2BHdETf7K95Adwc01',
       popular: true,
     },
     {
@@ -20,7 +20,7 @@ export default function PricingPage() {
       price: '$99.99',
       interval: 'year',
       description: 'Billed annually',
-      stripeLink: 'https://buy.stripe.com/test_你的年订阅链接',
+      stripeLink: 'https://buy.stripe.com/test_https://buy.stripe.com/test_8x23cv6RX58ngbOftYdwc02',
     },
   ]
 
