@@ -39,7 +39,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background pb-20">
-      {/* 顶部导航：Logo + 文字，已修复文字可见性 */}
+      {/* 顶部导航：Logo + 网站名称（玫瑰金加粗） */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-center">
           <Link href="/" className="flex items-center gap-3">
@@ -51,7 +51,7 @@ export default function Home() {
               className="h-12 w-auto"
               priority
             />
-            <span className="text-2xl font-serif text-foreground tracking-wide">
+            <span className="text-2xl font-serif font-bold text-primary tracking-wide">
               IvyNovel
             </span>
           </Link>
