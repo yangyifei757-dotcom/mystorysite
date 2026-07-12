@@ -4,20 +4,23 @@ export default function PricingPage() {
       name: 'Weekly',
       price: '$2.99',
       interval: 'week',
-      stripeLink: 'https://buy.stripe.com/test_dRmdR9dgl7gve3GftYdwc00',
+      description: 'Billed weekly',
+      stripeLink: 'https://buy.stripe.com/test_你的周订阅链接',
     },
     {
       name: 'Monthly',
-      price: '$9.99',
+      price: '$4.99',
       interval: 'month',
-      stripeLink: 'https://buy.stripe.com/test_cNiaEX2BHdETf7K95Adwc01',
+      description: 'First month, then $9.99/month',
+      stripeLink: 'https://buy.stripe.com/test_你的月订阅链接（已添加优惠券）',
       popular: true,
     },
     {
       name: 'Yearly',
       price: '$99.99',
       interval: 'year',
-      stripeLink: 'https://buy.stripe.com/test_8x23cv6RX58ngbOftYdwc02',
+      description: 'Billed annually',
+      stripeLink: 'https://buy.stripe.com/test_你的年订阅链接',
     },
   ]
 
@@ -26,7 +29,7 @@ export default function PricingPage() {
       <div className="max-w-4xl mx-auto text-center">
         <h1 className="font-serif text-5xl text-primary mb-6">Choose Your Reading Journey</h1>
         <p className="text-foreground/60 max-w-xl mx-auto mb-16">
-          Unlock unlimited stories with a membership. Subscribe weekly, monthly, or yearly and dive into our entire library.
+          Unlock unlimited stories with a membership. Start with a discounted first month.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -44,7 +47,7 @@ export default function PricingPage() {
               )}
               <h3 className="text-2xl font-serif text-primary mt-4 mb-4">{plan.name}</h3>
               <p className="text-4xl font-bold text-foreground mb-2">{plan.price}</p>
-              <p className="text-sm text-foreground/50 mb-6">billed {plan.interval}</p>
+              <p className="text-sm text-foreground/50 mb-6">{plan.description}</p>
               <a
                 href={plan.stripeLink}
                 target="_blank"
