@@ -12,10 +12,8 @@ const BG_STYLES = {
   dark: 'bg-[#1E1B1A] text-[#D4C5B9]',
 }
 
-// 小工具：生成显示用的章节标题
 function formatChapterTitle(orderNum: number, title: string | null | undefined) {
   const defaultTitle = `Chapter ${orderNum}`
-  // 如果 title 为空、或者就是 "Chapter X" 这种默认格式，只显示序号
   if (!title || title === defaultTitle || title.trim() === `Chapter ${orderNum}`) {
     return defaultTitle
   }
@@ -233,6 +231,7 @@ export default function ReadPage() {
             </div>
             <div className="space-y-2">
               {allChapters.map((ch: any) => {
+                const isFree = !ch.is_locked
                 const isCurrent = ch.id === chapterId
                 const canAccess = canAccessChapter(ch)
                 return (
@@ -249,8 +248,9 @@ export default function ReadPage() {
                     <span className="text-sm truncate">
                       {formatChapterTitle(ch.order_num, ch.title)}
                     </span>
-                    {!ch.is_locked && !hasSubscription ? (
-                      <span className="text-gray-400 text-sm">🔒</span>
+                    {/* 锁图标：付费章节且用户未订阅时显示 */}
+                    {!isFree && !hasSubscription ? (
+                      <span className="text-gray-400 text-sm flex-shrink-0 ml-2">🔒</span>
                     ) : null}
                   </div>
                 )
