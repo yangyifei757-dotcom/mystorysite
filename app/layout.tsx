@@ -1,20 +1,26 @@
 import './globals.css'
+import type { Metadata } from 'next'
 import { Inter, Playfair_Display } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next' // 新增
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
 
+export const metadata: Metadata = {
+  title: 'IvyNovel - Immersive Romance Stories',
+  description: 'Discover and read addictive romance novels. Subscribe for unlimited access.',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/favicon.ico" />
-        <title>IvyNovel - Immersive Romance Stories</title>
-        <meta name="description" content="Discover and read addictive romance novels." />
-      </head>
       <body className={`${inter.variable} ${playfair.variable} font-sans bg-background text-foreground antialiased`}>
         {children}
+        <Analytics /> {/* 新增，放在 body 末尾即可 */}
       </body>
     </html>
   )
