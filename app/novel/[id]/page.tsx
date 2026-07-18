@@ -6,6 +6,15 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 
+// 格式化章节标题（与阅读器保持一致）
+function formatChapterTitle(orderNum: number, title: string | null | undefined) {
+  const defaultTitle = `Chapter ${orderNum}`
+  if (!title || title === defaultTitle || title.trim() === `Chapter ${orderNum}`) {
+    return defaultTitle
+  }
+  return `Chapter ${orderNum}: ${title}`
+}
+
 export default function NovelPage() {
   const params = useParams()
   const id = params.id as string
@@ -86,11 +95,12 @@ export default function NovelPage() {
                 <div key={chapter.id} className="flex justify-between items-center p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition">
                   <div className="flex items-center gap-2">
                     <span className="text-foreground/80">
-                      Chapter {chapter.order_num}: {chapter.title}
+                      {formatChapterTitle(chapter.order_num, chapter.title)}
                     </span>
+                    {/* 状态标签 */}
                     {!hasSubscription && (
                       isFree ? (
-                        <span className="text-xs bg-green-900/40 text-green-300 px-2 py-0.5 rounded font-medium">Free</span>
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">Free</span>
                       ) : (
                         <span className="text-gray-400 text-lg">🔒</span>
                       )
