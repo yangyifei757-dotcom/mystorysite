@@ -1,38 +1,32 @@
 export default function PricingPage() {
   const plans = [
     {
-      name: 'Weekly',
-      price: '$2.99',
-      interval: 'week',
-      description: 'Billed weekly',
-      stripeLink: 'https://buy.stripe.com/test_dRmdR9dgl7gve3GftYdwc00',
-    },
-    {
       name: 'Monthly',
-      price: '$4.99',
+      price: '$6.99',
+      originalPrice: '$9.99',
       interval: 'month',
       description: 'First month, then $9.99/month',
-      stripeLink: 'https://buy.stripe.com/test_cNiaEX2BHdETf7K95Adwc01',
+      paymentLink: 'https://www.creem.io/payment/prod_4ZI6kyf8A9qbLyDyYYb6Tx?offer=QZO318UTSZ',
       popular: true,
     },
     {
       name: 'Yearly',
       price: '$99.99',
       interval: 'year',
-      description: 'Billed annually',
-      stripeLink: 'https://buy.stripe.com/test_8x23cv6RX58ngbOftYdwc02',
+      description: 'Billed annually — save 17%',
+      paymentLink: 'https://www.creem.io/payment/prod_1vKDDSUKmfkSefSmmhlHa',
     },
   ]
 
   return (
     <main className="min-h-screen bg-background pt-24 pb-16 px-4">
-      <div className="max-w-4xl mx-auto text-center">
+      <div className="max-w-2xl mx-auto text-center">
         <h1 className="font-serif text-5xl text-primary mb-6">Choose Your Reading Journey</h1>
         <p className="text-foreground/60 max-w-xl mx-auto mb-16">
-          Unlock unlimited stories with a membership. Start with a discounted first month.
+          Unlimited romance stories. Start with a discounted first month.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-lg mx-auto">
           {plans.map((plan) => (
             <div
               key={plan.name}
@@ -46,10 +40,13 @@ export default function PricingPage() {
                 </span>
               )}
               <h3 className="text-2xl font-serif text-primary mt-4 mb-4">{plan.name}</h3>
-              <p className="text-4xl font-bold text-foreground mb-2">{plan.price}</p>
+              <p className="text-4xl font-bold text-foreground mb-1">{plan.price}</p>
+              {plan.originalPrice && (
+                <p className="text-sm text-foreground/40 line-through mb-2">{plan.originalPrice}</p>
+              )}
               <p className="text-sm text-foreground/50 mb-6">{plan.description}</p>
               <a
-                href={plan.stripeLink}
+                href={plan.paymentLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full py-3 bg-primary text-background rounded-xl font-medium hover:bg-primary/90 transition text-center"
