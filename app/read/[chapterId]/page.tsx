@@ -19,16 +19,17 @@ export default function ReadPage() {
 
   const [chapter, setChapter] = useState<any>(null)
   const [novel, setNovel] = useState<any>(null)
+  const [allChapters, setAllChapters] = useState<any[]>([])
   const [canRead, setCanRead] = useState(false)
   const [loading, setLoading] = useState(true)
   const [fontSize, setFontSize] = useState(18)
   const [bgMode, setBgMode] = useState<keyof typeof BG_STYLES>('warm')
   const [hasSubscription, setHasSubscription] = useState(false)
   const [isLastFreeChapter, setIsLastFreeChapter] = useState(false)
+  const [showTOC, setShowTOC] = useState(false) // 目录抽屉状态
 
   useEffect(() => {
     const checkAccess = async () => {
-      // 1. 获取当前章节和小说信息
       const { data: chapterData, error: chapterError } = await supabase
         .from('chapters')
         .select('*, novel:novel_id(*)')
@@ -42,29 +43,28 @@ export default function ReadPage() {
 
       setChapter(chapterData)
       setNovel(chapterData.novel)
+      const freeChapters = chapterData.novel?.free_chapters || 3
 
-      // 2. 获取当前小说所有章节（用于判断最后免费章）
-      const { data: allChapters } = await supabase
+      // 获取所有章节（用于目录和判断最后免费章）
+      const { data: chaptersList } = await supabase
         .from('chapters')
-        .select('id, is_locked, order_num')
+        .select('id, title, is_locked, order_num')
         .eq('novel_id', chapterData.novel.id)
         .order('order_num', { ascending: true })
 
-      if (allChapters) {
-        // 找到最后一个 is_locked === false 的章节
-        const lastFree = allChapters.filter(ch => !ch.is_locked).pop()
+      if (chaptersList) {
+        setAllChapters(chaptersList)
+        const lastFree = chaptersList.filter((ch: any) => ch.order_num <= freeChapters).pop()
         if (lastFree && lastFree.id === chapterId) {
           setIsLastFreeChapter(true)
         }
       }
 
-      // 3. 获取当前用户及订阅状态
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
 
       let subscribed = false
       if (currentUser) {
-        // 自动保存阅读进度
         await supabase.from('reading_progress').upsert({
           user_id: currentUser.id,
           chapter_id: chapterId,
@@ -83,8 +83,9 @@ export default function ReadPage() {
       }
       setHasSubscription(subscribed)
 
-      // 4. 判断阅读权限
-      if (!chapterData.is_locked) {
+      // 阅读权限判断
+      const isFreeChapter = chapterData.order_num <= freeChapters
+      if (isFreeChapter) {
         setCanRead(true)
       } else {
         if (!currentUser) {
@@ -112,7 +113,16 @@ export default function ReadPage() {
       .eq('novel_id', novel.id)
       .eq('order_num', orderNum)
       .single()
-    if (data?.id) router.push(`/read/${data.id}`)
+    if (data?.id) {
+      router.push(`/read/${data.id}`)
+      setShowTOC(false)
+    }
+  }
+
+  // 判断某章是否可访问（用于目录）
+  const canAccessChapter = (ch: any) => {
+    if (!ch.is_locked) return true
+    return hasSubscription
   }
 
   if (loading) {
@@ -127,9 +137,7 @@ export default function ReadPage() {
 
   const paragraphs = chapter.content?.split('\n').filter(Boolean) || []
   const currentIndex = chapter.order_num
-
-  // 只有同时满足：是免费章节、是最后一章免费章节、用户未订阅时，才显示会员引导
-  const showSubscriptionCard = !chapter.is_locked && isLastFreeChapter && !hasSubscription
+  const showSubscriptionCard = chapter.order_num <= (novel?.free_chapters || 3) && isLastFreeChapter && !hasSubscription
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
@@ -144,6 +152,9 @@ export default function ReadPage() {
           </Link>
         </div>
         <div className="flex gap-2 items-center text-sm">
+          <button onClick={() => setShowTOC(true)} className="text-sm hover:text-primary transition">
+            ☰ Chapters
+          </button>
           <button onClick={() => setFontSize(prev => Math.max(FONT_SIZES[0], prev - 2))}>A-</button>
           <span className="text-xs">{fontSize}px</span>
           <button onClick={() => setFontSize(prev => Math.min(FONT_SIZES[FONT_SIZES.length - 1], prev + 2))}>A+</button>
@@ -166,7 +177,6 @@ export default function ReadPage() {
           <p key={i} className="mb-4">{p}</p>
         ))}
 
-        {/* 会员引导卡片：仅在最后一章免费章节末尾显示，且用户未订阅 */}
         {showSubscriptionCard && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
@@ -202,6 +212,47 @@ export default function ReadPage() {
           Next →
         </button>
       </div>
+
+      {/* 章节目录抽屉 */}
+      {showTOC && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* 遮罩 */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowTOC(false)} />
+          {/* 目录面板 */}
+          <div className="relative w-80 max-w-[85vw] bg-white h-full overflow-y-auto shadow-xl p-6 ml-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-serif font-bold">Chapters</h2>
+              <button onClick={() => setShowTOC(false)} className="text-foreground/50 hover:text-foreground">✕</button>
+            </div>
+            <div className="space-y-2">
+              {allChapters.map((ch: any) => {
+                const isFree = !ch.is_locked
+                const isCurrent = ch.id === chapterId
+                const canAccess = canAccessChapter(ch)
+                return (
+                  <div
+                    key={ch.id}
+                    onClick={() => {
+                      if (canAccess) goToChapter(ch.order_num)
+                      else router.push('/pricing')
+                    }}
+                    className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
+                      isCurrent ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent/30'
+                    } ${!canAccess && !isFree ? 'opacity-60' : ''}`}
+                  >
+                    <span className="text-sm truncate">
+                      Ch. {ch.order_num}: {ch.title}
+                    </span>
+                    {!isFree && !hasSubscription ? (
+                      <span className="text-gray-400 text-sm">🔒</span>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
