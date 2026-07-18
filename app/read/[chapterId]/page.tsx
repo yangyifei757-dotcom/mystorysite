@@ -12,6 +12,16 @@ const BG_STYLES = {
   dark: 'bg-[#1E1B1A] text-[#D4C5B9]',
 }
 
+// 小工具：生成显示用的章节标题
+function formatChapterTitle(orderNum: number, title: string | null | undefined) {
+  const defaultTitle = `Chapter ${orderNum}`
+  // 如果 title 为空、或者就是 "Chapter X" 这种默认格式，只显示序号
+  if (!title || title === defaultTitle || title.trim() === `Chapter ${orderNum}`) {
+    return defaultTitle
+  }
+  return `Chapter ${orderNum}: ${title}`
+}
+
 export default function ReadPage() {
   const params = useParams()
   const chapterId = params.chapterId as string
@@ -26,7 +36,7 @@ export default function ReadPage() {
   const [bgMode, setBgMode] = useState<keyof typeof BG_STYLES>('warm')
   const [hasSubscription, setHasSubscription] = useState(false)
   const [isLastFreeChapter, setIsLastFreeChapter] = useState(false)
-  const [showTOC, setShowTOC] = useState(false) // 目录抽屉状态
+  const [showTOC, setShowTOC] = useState(false)
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -45,7 +55,6 @@ export default function ReadPage() {
       setNovel(chapterData.novel)
       const freeChapters = chapterData.novel?.free_chapters || 3
 
-      // 获取所有章节（用于目录和判断最后免费章）
       const { data: chaptersList } = await supabase
         .from('chapters')
         .select('id, title, is_locked, order_num')
@@ -83,7 +92,6 @@ export default function ReadPage() {
       }
       setHasSubscription(subscribed)
 
-      // 阅读权限判断
       const isFreeChapter = chapterData.order_num <= freeChapters
       if (isFreeChapter) {
         setCanRead(true)
@@ -119,7 +127,6 @@ export default function ReadPage() {
     }
   }
 
-  // 判断某章是否可访问（用于目录）
   const canAccessChapter = (ch: any) => {
     if (!ch.is_locked) return true
     return hasSubscription
@@ -172,7 +179,9 @@ export default function ReadPage() {
 
       {/* 章节内容 */}
       <article className="max-w-2xl mx-auto px-4 pt-16 pb-32 font-serif" style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}>
-        <h1 className="text-2xl mb-8 font-bold">Chapter {chapter.order_num}: {chapter.title}</h1>
+        <h1 className="text-2xl mb-8 font-bold">
+          {formatChapterTitle(chapter.order_num, chapter.title)}
+        </h1>
         {paragraphs.map((p: string, i: number) => (
           <p key={i} className="mb-4">{p}</p>
         ))}
@@ -216,9 +225,7 @@ export default function ReadPage() {
       {/* 章节目录抽屉 */}
       {showTOC && (
         <div className="fixed inset-0 z-50 flex">
-          {/* 遮罩 */}
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowTOC(false)} />
-          {/* 目录面板 */}
           <div className="relative w-80 max-w-[85vw] bg-white h-full overflow-y-auto shadow-xl p-6 ml-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-serif font-bold">Chapters</h2>
@@ -226,7 +233,6 @@ export default function ReadPage() {
             </div>
             <div className="space-y-2">
               {allChapters.map((ch: any) => {
-                const isFree = !ch.is_locked
                 const isCurrent = ch.id === chapterId
                 const canAccess = canAccessChapter(ch)
                 return (
@@ -238,12 +244,12 @@ export default function ReadPage() {
                     }}
                     className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
                       isCurrent ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent/30'
-                    } ${!canAccess && !isFree ? 'opacity-60' : ''}`}
+                    } ${!canAccess ? 'opacity-60' : ''}`}
                   >
                     <span className="text-sm truncate">
-                      Ch. {ch.order_num}: {ch.title}
+                      {formatChapterTitle(ch.order_num, ch.title)}
                     </span>
-                    {!isFree && !hasSubscription ? (
+                    {!ch.is_locked && !hasSubscription ? (
                       <span className="text-gray-400 text-sm">🔒</span>
                     ) : null}
                   </div>
