@@ -6,7 +6,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 
-// 格式化章节标题（与阅读器保持一致）
 function formatChapterTitle(orderNum: number, title: string | null | undefined) {
   const defaultTitle = `Chapter ${orderNum}`
   if (!title || title === defaultTitle || title.trim() === `Chapter ${orderNum}`) {
@@ -21,12 +20,12 @@ export default function NovelPage() {
 
   const [novel, setNovel] = useState<any>(null)
   const [chapters, setChapters] = useState<any[]>([])
-  const [user, setUser] = useState<any>(null)
   const [hasSubscription, setHasSubscription] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
+      // 获取小说和章节
       const { data: novelData } = await supabase.from('novels').select('*').eq('id', id).single()
       const { data: chaptersData } = await supabase
         .from('chapters')
@@ -38,21 +37,22 @@ export default function NovelPage() {
       setChapters(chaptersData || [])
       if (novelData) document.title = `${novelData.title} - IvyNovel`
 
+      // 检查当前用户订阅状态
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
-      setUser(currentUser)
 
       if (currentUser) {
         const { data: sub } = await supabase
           .from('subscriptions')
           .select('status, current_period_end')
           .eq('user_id', currentUser.id)
-          .single()
+          .maybeSingle() // 使用 maybeSingle 避免无记录时报错
 
         if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
           setHasSubscription(true)
         }
       }
+
       setLoading(false)
     }
 
@@ -68,13 +68,7 @@ export default function NovelPage() {
         <div className="w-full md:w-1/3">
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-card">
             {novel.cover_url ? (
-              <Image
-                src={novel.cover_url}
-                alt={novel.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 33vw"
-              />
+              <Image src={novel.cover_url} alt={novel.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
             ) : (
               <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
             )}
@@ -97,7 +91,6 @@ export default function NovelPage() {
                     <span className="text-foreground/80">
                       {formatChapterTitle(chapter.order_num, chapter.title)}
                     </span>
-                    {/* 状态标签 */}
                     {!hasSubscription && (
                       isFree ? (
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">Free</span>
