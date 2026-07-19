@@ -5,7 +5,7 @@ export default function RefundPolicyPage() {
         <h1 className="text-2xl font-serif text-primary">Refund Policy</h1>
         <p>Last updated: {new Date().getFullYear()}</p>
         <p>Subscriptions can be cancelled at any time. You will continue to have access until the end of your billing period.</p>
-        <p>We do not offer partial refunds for unused time. If you experience a technical issue, please contact support@ivynovel.com and we’ll make it right.</p>
+        <p>We do not offer partial refunds for unused time. If you experience a technical issue, please contact yangyifei757@gmail.com and we’ll make it right.</p>
       </div>
     </main>
   )
