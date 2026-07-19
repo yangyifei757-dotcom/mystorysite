@@ -2,9 +2,9 @@ export default function PricingPage() {
   const plans = [
     {
       name: 'Monthly',
-      dailyPrice: '0.33',        // 基于原价 $9.99 折算
+      dailyPrice: '0.33',
       monthlyPrice: '9.99',
-      firstMonthPrice: '6.99',   // 首月优惠价，单独展示
+      firstMonthPrice: '6.99',
       interval: 'month',
       description: 'Then $9.99/month after first month',
       paymentLink: 'https://www.creem.io/payment/prod_4ZI6kyf8A9qbLyDyYYb6Tx?offer=QZO318UTSZ',
@@ -12,7 +12,7 @@ export default function PricingPage() {
     },
     {
       name: 'Yearly',
-      dailyPrice: '0.27',        // 基于 $99.99 折算，最低日费
+      dailyPrice: '0.27',
       yearlyPrice: '99.99',
       interval: 'year',
       description: 'Billed annually — best value',
@@ -48,6 +48,18 @@ export default function PricingPage() {
                 ${plan.dailyPrice}
                 <span className="text-xl text-foreground/50 font-normal">/day</span>
               </p>
+
+              {/* 月费/年费弱化显示 */}
+              {plan.monthlyPrice && (
+                <p className="text-xs text-foreground/30 mb-1">
+                  ${plan.monthlyPrice}/month
+                </p>
+              )}
+              {plan.yearlyPrice && (
+                <p className="text-xs text-foreground/30 mb-1">
+                  ${plan.yearlyPrice}/year
+                </p>
+              )}
 
               {/* 首月优惠标签（仅月订阅有） */}
               {plan.firstMonthPrice && (
