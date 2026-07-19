@@ -2,18 +2,20 @@ export default function PricingPage() {
   const plans = [
     {
       name: 'Monthly',
-      price: '$6.99',
-      originalPrice: '$9.99',
+      dailyPrice: '0.33',        // 基于原价 $9.99 折算
+      monthlyPrice: '9.99',
+      firstMonthPrice: '6.99',   // 首月优惠价，单独展示
       interval: 'month',
-      description: 'First month, then $9.99/month',
+      description: 'Then $9.99/month after first month',
       paymentLink: 'https://www.creem.io/payment/prod_4ZI6kyf8A9qbLyDyYYb6Tx?offer=QZO318UTSZ',
       popular: true,
     },
     {
       name: 'Yearly',
-      price: '$99.99',
+      dailyPrice: '0.27',        // 基于 $99.99 折算，最低日费
+      yearlyPrice: '99.99',
       interval: 'year',
-      description: 'Billed annually — save 17%',
+      description: 'Billed annually — best value',
       paymentLink: 'https://www.creem.io/payment/prod_1vKDDSUKmfkSefSmmhlHa',
     },
   ]
@@ -23,7 +25,7 @@ export default function PricingPage() {
       <div className="max-w-2xl mx-auto text-center">
         <h1 className="font-serif text-5xl text-primary mb-6">Choose Your Reading Journey</h1>
         <p className="text-foreground/60 max-w-xl mx-auto mb-16">
-          Unlimited romance stories. Start with a discounted first month.
+          Unlimited romance stories. Less than a cup of coffee.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-lg mx-auto">
@@ -40,11 +42,23 @@ export default function PricingPage() {
                 </span>
               )}
               <h3 className="text-2xl font-serif text-primary mt-4 mb-4">{plan.name}</h3>
-              <p className="text-4xl font-bold text-foreground mb-1">{plan.price}</p>
-              {plan.originalPrice && (
-                <p className="text-sm text-foreground/40 line-through mb-2">{plan.originalPrice}</p>
+
+              {/* 日费突出显示 */}
+              <p className="text-5xl font-bold text-foreground mb-1">
+                ${plan.dailyPrice}
+                <span className="text-xl text-foreground/50 font-normal">/day</span>
+              </p>
+
+              {/* 首月优惠标签（仅月订阅有） */}
+              {plan.firstMonthPrice && (
+                <p className="text-sm text-primary font-medium mt-2">
+                  First month only ${plan.firstMonthPrice}
+                </p>
               )}
-              <p className="text-sm text-foreground/50 mb-6">{plan.description}</p>
+
+              {/* 说明文字 */}
+              <p className="text-sm text-foreground/50 mt-4 mb-6">{plan.description}</p>
+
               <a
                 href={plan.paymentLink}
                 target="_blank"
