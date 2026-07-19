@@ -150,6 +150,7 @@ export default function ReadPage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
+      {/* 顶部工具栏 */}
       <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-sm border-b border-border/50 px-4 py-2 flex items-center justify-between">
         <div className="flex gap-3">
           <Link href={`/novel/${novel?.id || ''}`} className="text-sm hover:text-primary transition">
@@ -178,6 +179,7 @@ export default function ReadPage() {
         </div>
       </div>
 
+      {/* 章节内容 */}
       <article className="max-w-2xl mx-auto px-4 pt-16 pb-32 font-serif" style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}>
         <h1 className="text-2xl mb-8 font-bold">
           {formatChapterTitle(chapter.order_num, chapter.title)}
@@ -186,24 +188,25 @@ export default function ReadPage() {
           <p key={i} className="mb-4">{p}</p>
         ))}
 
+        {/* 会员引导卡片：仅在最后一章免费章节末尾显示，且用户未订阅 */}
         {showSubscriptionCard && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
             <h3 className="text-xl font-serif text-foreground mb-2">Loved this story?</h3>
             <p className="text-foreground/60 text-sm mb-5 max-w-xs mx-auto">
-              Unlock all chapters and binge-read your favorite romance tales.
+              Unlimited romance stories for less than a cup of coffee.
             </p>
             <Link
               href="/pricing"
               className="inline-block bg-primary text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-primary/90 transition shadow-md hover:shadow-lg"
             >
-              Subscribe Now — from $2.99/week
+              Subscribe Now
             </Link>
-            <p className="text-xs text-foreground/40 mt-3">Cancel anytime. No commitment.</p>
           </div>
         )}
       </article>
 
+      {/* 底部导航 */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border px-4 py-3 flex justify-between items-center">
         <button
           onClick={() => goToChapter(currentIndex - 1)}
@@ -221,6 +224,7 @@ export default function ReadPage() {
         </button>
       </div>
 
+      {/* 章节目录抽屉 */}
       {showTOC && (
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowTOC(false)} />
