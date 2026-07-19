@@ -79,11 +79,15 @@ export default function ReadPage() {
           updated_at: new Date().toISOString(),
         })
 
-        const { data: sub } = await supabase
+        const { data: sub, error: subError } = await supabase
           .from('subscriptions')
           .select('status, current_period_end')
           .eq('user_id', currentUser.id)
-          .single()
+          .maybeSingle()
+
+        if (subError) {
+          console.error('订阅查询错误:', subError)
+        }
         if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
           subscribed = true
         }
@@ -146,7 +150,6 @@ export default function ReadPage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
-      {/* 顶部工具栏 */}
       <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-sm border-b border-border/50 px-4 py-2 flex items-center justify-between">
         <div className="flex gap-3">
           <Link href={`/novel/${novel?.id || ''}`} className="text-sm hover:text-primary transition">
@@ -175,7 +178,6 @@ export default function ReadPage() {
         </div>
       </div>
 
-      {/* 章节内容 */}
       <article className="max-w-2xl mx-auto px-4 pt-16 pb-32 font-serif" style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}>
         <h1 className="text-2xl mb-8 font-bold">
           {formatChapterTitle(chapter.order_num, chapter.title)}
@@ -202,7 +204,6 @@ export default function ReadPage() {
         )}
       </article>
 
-      {/* 底部导航 */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border px-4 py-3 flex justify-between items-center">
         <button
           onClick={() => goToChapter(currentIndex - 1)}
@@ -220,7 +221,6 @@ export default function ReadPage() {
         </button>
       </div>
 
-      {/* 章节目录抽屉 */}
       {showTOC && (
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowTOC(false)} />
@@ -248,7 +248,6 @@ export default function ReadPage() {
                     <span className="text-sm truncate">
                       {formatChapterTitle(ch.order_num, ch.title)}
                     </span>
-                    {/* 锁图标：付费章节且用户未订阅时显示 */}
                     {!isFree && !hasSubscription ? (
                       <span className="text-gray-400 text-sm flex-shrink-0 ml-2">🔒</span>
                     ) : null}
