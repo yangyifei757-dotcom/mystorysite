@@ -39,22 +39,27 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background pb-20">
-      {/* 顶部导航：Logo + 网站名称（玫瑰金加粗） */}
+      {/* 顶部导航：Logo + Pricing 入口 */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-center">
-          <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="IvyNovel Logo"
-              width={180}
-              height={60}
-              className="h-12 w-auto"
-              priority
-            />
-            <span className="text-2xl font-serif font-bold text-primary tracking-wide">
-              IvyNovel
-            </span>
-          </Link>
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-3">
+              <Image
+                src="/logo.png"
+                alt="IvyNovel Logo"
+                width={180}
+                height={60}
+                className="h-12 w-auto"
+                priority
+              />
+              <span className="text-2xl font-serif font-bold text-primary tracking-wide">
+                IvyNovel
+              </span>
+            </Link>
+            <Link href="/pricing" className="text-sm font-medium text-foreground/70 hover:text-primary transition">
+              Pricing
+            </Link>
+          </div>
         </div>
       </header>
 
