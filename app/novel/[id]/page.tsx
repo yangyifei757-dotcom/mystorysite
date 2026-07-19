@@ -22,6 +22,7 @@ export default function NovelPage() {
   const [chapters, setChapters] = useState<any[]>([])
   const [hasSubscription, setHasSubscription] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [debug, setDebug] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,24 +36,38 @@ export default function NovelPage() {
 
       setNovel(novelData)
       setChapters(chaptersData || [])
-      if (novelData) document.title = `${novelData.title} - IvyNovel`
 
       // 检查当前用户订阅状态
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
+      let subDebug = '未登录'
 
       if (currentUser) {
-        const { data: sub } = await supabase
+        subDebug = '已登录，用户ID: ' + currentUser.id
+        const { data: sub, error } = await supabase
           .from('subscriptions')
           .select('status, current_period_end')
           .eq('user_id', currentUser.id)
-          .maybeSingle() // 使用 maybeSingle 避免无记录时报错
+          .maybeSingle()
 
-        if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
-          setHasSubscription(true)
+        if (error) {
+          subDebug += ' | 查询错误: ' + error.message
+        } else if (sub) {
+          subDebug += ' | 找到订阅: ' + sub.status + '，到期日: ' + sub.current_period_end
+          if (sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
+            setHasSubscription(true)
+            subDebug += ' | ✅ 有效订阅'
+          } else {
+            subDebug += ' | ❌ 订阅无效'
+          }
+        } else {
+          subDebug += ' | 无订阅记录'
         }
+      } else {
+        subDebug = '未登录 (getSession 返回空)'
       }
 
+      setDebug(subDebug)
       setLoading(false)
     }
 
@@ -64,6 +79,11 @@ export default function NovelPage() {
 
   return (
     <main className="min-h-screen bg-background pt-24 pb-16 px-4">
+      {/* 调试信息 */}
+      <div className="max-w-4xl mx-auto mb-4 p-3 bg-gray-100 rounded text-xs text-gray-700">
+        <strong>调试信息：</strong> {debug}
+      </div>
+
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-10">
         <div className="w-full md:w-1/3">
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-card">
