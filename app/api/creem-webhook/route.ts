@@ -3,92 +3,89 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Missing Supabase env vars');
-  return createClient(url, key);
-}
-
 export async function POST(request: Request) {
-  const payload = await request.json();
-  console.log('Creem Webhook received:', JSON.stringify(payload));
-
   try {
-    // 注意：Creem 的事件类型字段是 eventType，不是 event
-    if (payload.eventType === 'subscription.paid') {
-      const email = payload.object?.customer?.email;
-      const planId = payload.object?.product?.id;
-      
-      if (!email) {
-        console.error('No email found in payload');
-        return NextResponse.json({ error: 'No email found' }, { status: 400 });
-      }
+    const payload = await request.json();
+    console.log('1. Received payload, eventType:', payload.eventType);
 
-      const supabase = getSupabaseAdmin();
-
-      // 根据产品 ID 确定计划名称和到期日
-      let plan = 'monthly';
-      let daysToAdd = 30;
-      
-      // 你的真实产品 ID
-      if (planId === 'prod_4ZI6kyf8A9qbLyDyYYb6Tx') {
-        plan = 'monthly';
-        daysToAdd = 30;
-      } else if (planId === 'prod_1vKDDSUKmfkSefSmmhlHa') {
-        plan = 'yearly';
-        daysToAdd = 365;
-      }
-
-      // 如果测试事件的产品 ID 不是上面两个，就用 payload 中的到期日来计算
-      const currentPeriodEnd = payload.object?.current_period_end_date;
-      let periodEnd: Date;
-      if (currentPeriodEnd) {
-        periodEnd = new Date(currentPeriodEnd);
-      } else {
-        periodEnd = new Date();
-        periodEnd.setDate(periodEnd.getDate() + daysToAdd);
-      }
-
-      // 查找或创建用户
-      let userId = null;
-      const { data: existing } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (existing) {
-        userId = existing.id;
-      } else {
-        const { data: newUser, error: createError } = await supabase
-          .from('profiles')
-          .insert({ email })
-          .select('id')
-          .single();
-        if (createError || !newUser) throw new Error('User creation failed');
-        userId = newUser.id;
-      }
-
-      // 更新订阅状态
-      const { error: upsertError } = await supabase
-        .from('subscriptions')
-        .upsert({
-          user_id: userId,
-          plan,
-          status: 'active',
-          current_period_end: periodEnd.toISOString(),
-          provider: 'creem',
-        });
-
-      if (upsertError) throw upsertError;
-
-      console.log(`✅ Creem subscription activated for ${email} (plan: ${plan})`);
+    if (payload.eventType !== 'subscription.paid') {
+      console.log('1a. Not subscription.paid, skipping');
+      return NextResponse.json({ received: true, skipped: true });
     }
 
-    return NextResponse.json({ received: true });
+    const email = payload.object?.customer?.email;
+    const planId = payload.object?.product?.id;
+    console.log('2. Email:', email, 'PlanId:', planId);
+
+    if (!email) {
+      console.log('2a. No email, returning 400');
+      return NextResponse.json({ error: 'No email' }, { status: 400 });
+    }
+
+    // 检查环境变量
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    console.log('3. Supabase URL exists:', !!supabaseUrl, 'Service Key exists:', !!serviceKey);
+
+    if (!supabaseUrl || !serviceKey) {
+      console.log('3a. Missing env vars');
+      return NextResponse.json({ error: 'Missing env vars' }, { status: 500 });
+    }
+
+    const supabase = createClient(supabaseUrl, serviceKey);
+    console.log('4. Supabase client created');
+
+    // 查找或创建用户
+    const { data: existing, error: findError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
+    
+    console.log('5. Find user result:', existing?.id, 'Error:', findError?.message);
+
+    let userId = existing?.id;
+    if (!userId) {
+      const { data: newUser, error: createError } = await supabase
+        .from('profiles')
+        .insert({ email })
+        .select('id')
+        .single();
+      console.log('6. Create user result:', newUser?.id, 'Error:', createError?.message);
+      
+      if (createError || !newUser) {
+        console.log('6a. User creation failed');
+        return NextResponse.json({ error: 'User creation failed' }, { status: 500 });
+      }
+      userId = newUser.id;
+    }
+
+    // 更新订阅
+    const periodEnd = new Date();
+    periodEnd.setDate(periodEnd.getDate() + 30);
+
+    const { error: upsertError } = await supabase
+      .from('subscriptions')
+      .upsert({
+        user_id: userId,
+        plan: 'monthly',
+        status: 'active',
+        current_period_end: periodEnd.toISOString(),
+        provider: 'creem',
+      });
+    
+    console.log('7. Upsert result, Error:', upsertError?.message);
+
+    if (upsertError) {
+      console.log('7a. Upsert failed');
+      return NextResponse.json({ error: upsertError.message }, { status: 500 });
+    }
+
+    console.log('8. Success!');
+    return NextResponse.json({ received: true, success: true });
+
   } catch (err: any) {
-    console.error('Webhook error:', err.message);
+    console.error('CRASH:', err.message, err.stack);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
