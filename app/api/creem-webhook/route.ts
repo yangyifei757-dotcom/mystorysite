@@ -15,10 +15,10 @@ export async function POST(request: Request) {
   console.log('Creem Webhook received:', JSON.stringify(payload));
 
   try {
-    // 监听 subscription.paid 事件（首次支付 + 续费）
-    if (payload.event === 'subscription.paid') {
-      const email = payload.customer?.email || payload.data?.customer?.email || payload.subscription?.customer_email;
-      const planId = payload.product?.id || payload.data?.product?.id || payload.subscription?.product_id;
+    // 注意：Creem 的事件类型字段是 eventType，不是 event
+    if (payload.eventType === 'subscription.paid') {
+      const email = payload.object?.customer?.email;
+      const planId = payload.object?.product?.id;
       
       if (!email) {
         console.error('No email found in payload');
@@ -27,10 +27,11 @@ export async function POST(request: Request) {
 
       const supabase = getSupabaseAdmin();
 
-      // 根据产品 ID 确定计划
+      // 根据产品 ID 确定计划名称和到期日
       let plan = 'monthly';
       let daysToAdd = 30;
       
+      // 你的真实产品 ID
       if (planId === 'prod_4ZI6kyf8A9qbLyDyYYb6Tx') {
         plan = 'monthly';
         daysToAdd = 30;
@@ -39,8 +40,15 @@ export async function POST(request: Request) {
         daysToAdd = 365;
       }
 
-      const periodEnd = new Date();
-      periodEnd.setDate(periodEnd.getDate() + daysToAdd);
+      // 如果测试事件的产品 ID 不是上面两个，就用 payload 中的到期日来计算
+      const currentPeriodEnd = payload.object?.current_period_end_date;
+      let periodEnd: Date;
+      if (currentPeriodEnd) {
+        periodEnd = new Date(currentPeriodEnd);
+      } else {
+        periodEnd = new Date();
+        periodEnd.setDate(periodEnd.getDate() + daysToAdd);
+      }
 
       // 查找或创建用户
       let userId = null;
