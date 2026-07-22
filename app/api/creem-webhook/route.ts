@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +21,7 @@ export async function POST(request: Request) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !serviceKey) {
-      const msg = 'Missing env vars: ' + (!supabaseUrl ? 'URL ' : '') + (!serviceKey ? 'KEY' : '');
-      return NextResponse.json({ error: msg }, { status: 500 });
+      return NextResponse.json({ error: 'Missing env vars' }, { status: 500 });
     }
 
     const supabase = createClient(supabaseUrl, serviceKey);
@@ -37,9 +37,11 @@ export async function POST(request: Request) {
     if (existing?.id) {
       userId = existing.id;
     } else {
+      // 手动生成 UUID 作为 id
+      const newId = uuidv4();
       const { data: newUser, error: createError } = await supabase
         .from('profiles')
-        .insert({ email })
+        .insert({ id: newId, email })
         .select('id')
         .single();
 
