@@ -21,7 +21,8 @@
     "lucide-react": "^0.312.0",
     "tailwind-merge": "^2.2.0",
     "tailwindcss-animate": "^1.0.7",
-    "@vercel/analytics": "latest"
+    "@vercel/analytics": "latest",
+    "uuid": "latest"
   },
   "devDependencies": {
     "typescript": "^5",
