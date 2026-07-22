@@ -25,22 +25,20 @@ export async function POST(request: Request) {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // 1. 先查找 profiles 表中是否已有该邮箱的用户
+    // 1. 查找或创建 Auth 用户
     let userId = null;
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
 
-    if (existing?.id) {
-      userId = existing.id;
+    // 先尝试通过 email 查找已有用户
+    const { data: existingUsers } = await supabase.auth.admin.listUsers();
+    const foundUser = existingUsers?.users?.find((u: any) => u.email === email);
+
+    if (foundUser?.id) {
+      userId = foundUser.id;
     } else {
-      // 2. 没有找到，通过 Supabase Admin API 创建一个 Auth 用户
+      // 创建新的 Auth 用户
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
         email,
         email_confirm: true,
-        user_metadata: { source: 'creem_webhook' },
       });
 
       if (createError || !newUser?.user?.id) {
@@ -50,24 +48,32 @@ export async function POST(request: Request) {
       }
 
       userId = newUser.user.id;
-
-      // 3. 在 profiles 表中创建对应记录
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({ id: userId, email });
-
-      if (profileError) {
-        return NextResponse.json({ 
-          error: 'Create profile failed: ' + profileError.message 
-        }, { status: 500 });
-      }
     }
 
     if (!userId) {
       return NextResponse.json({ error: 'No userId after create' }, { status: 500 });
     }
 
-    // 4. 更新订阅状态
+    // 2. 更新 profiles 表中的 email（Supabase 自动创建了记录，但 email 可能为空）
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ email })
+      .eq('id', userId);
+
+    // 如果更新失败（记录不存在），则尝试插入
+    if (updateError && updateError.code === 'PGRST116') {
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({ id: userId, email });
+      
+      if (insertError && insertError.code !== '23505') {
+        return NextResponse.json({ 
+          error: 'Profile insert failed: ' + insertError.message 
+        }, { status: 500 });
+      }
+    }
+
+    // 3. 更新订阅状态
     const periodEnd = new Date();
     periodEnd.setDate(periodEnd.getDate() + 30);
 
