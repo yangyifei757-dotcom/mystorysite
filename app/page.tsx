@@ -169,11 +169,10 @@ export default function Home() {
         )}
       </section>
 
-      {/* Footer 法律链接（包含 Acceptable Use Policy） */}
+      {/* Footer 法律链接 */}
       <div className="max-w-6xl mx-auto px-4 pb-6 flex justify-center gap-6 text-xs text-foreground/40">
         <Link href="/privacy-policy" className="hover:text-primary transition">Privacy Policy</Link>
         <Link href="/terms-of-service" className="hover:text-primary transition">Terms of Service</Link>
-        <Link href="/acceptable-use-policy" className="hover:text-primary transition">Acceptable Use Policy</Link>
       </div>
 
       {/* 底部导航栏 */}
