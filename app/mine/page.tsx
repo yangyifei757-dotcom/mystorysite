@@ -26,17 +26,6 @@ export default function MinePage() {
     router.push('/login')
   }
 
-  const handleManageSubscription = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token
-    if (!token) return
-    const res = await fetch('/api/portal', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    const data = await res.json()
-    if (data.url) window.location.href = data.url
-  }
-
   if (!user) return null
 
   return (
@@ -50,12 +39,6 @@ export default function MinePage() {
         </div>
 
         <div className="bg-card rounded-2xl shadow-card p-4 space-y-3">
-          <button
-            onClick={handleManageSubscription}
-            className="w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition"
-          >
-            Manage Subscription
-          </button>
           <Link
             href="/library"
             className="block w-full py-3 bg-accent text-accent-foreground rounded-xl text-center font-medium hover:bg-accent/80 transition"
