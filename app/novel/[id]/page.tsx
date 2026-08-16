@@ -34,22 +34,24 @@ export default function NovelPage() {
 
       setNovel(novelData)
       setChapters(chaptersData || [])
+      if (novelData) document.title = `${novelData.title} - IvyNovel`
 
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
 
       if (currentUser) {
-        const { data: sub } = await supabase
+        const { data: sub, error: subError } = await supabase
           .from('subscriptions')
           .select('status, current_period_end')
           .eq('user_id', currentUser.id)
           .maybeSingle()
 
+        if (subError) console.error('订阅查询错误:', subError)
+
         if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
           setHasSubscription(true)
         }
       }
-
       setLoading(false)
     }
 
@@ -65,7 +67,13 @@ export default function NovelPage() {
         <div className="w-full md:w-1/3">
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-card">
             {novel.cover_url ? (
-              <Image src={novel.cover_url} alt={novel.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
+              <Image
+                src={novel.cover_url}
+                alt={novel.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 33vw"
+              />
             ) : (
               <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
             )}
