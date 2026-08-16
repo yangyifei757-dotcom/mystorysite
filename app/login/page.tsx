@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -10,12 +10,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/'
+
   // Google 登录
   const handleGoogleLogin = async () => {
     setLoading(true)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: {
+        redirectTo: window.location.origin + redirectTo,
+      },
     })
     if (error) setMessage(error.message)
     setLoading(false)
@@ -27,8 +32,11 @@ export default function LoginPage() {
     setLoading(true)
     setMessage('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setMessage(error.message)
-    else window.location.href = '/'
+    if (error) {
+      setMessage(error.message)
+    } else {
+      window.location.href = redirectTo
+    }
     setLoading(false)
   }
 
@@ -55,7 +63,7 @@ export default function LoginPage() {
       const result = await res.json()
       if (result.success) {
         await supabase.auth.signInWithPassword({ email, password })
-        window.location.href = '/'
+        window.location.href = redirectTo
       } else {
         setMessage('Account created but auto-confirm failed. Please try logging in or contact support.')
       }
@@ -123,9 +131,8 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* 忘记密码链接 */}
         <p className="text-center text-sm text-foreground/50">
-          <Link href="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
+          <a href="/forgot-password" className="text-primary hover:underline">Forgot password?</a>
         </p>
 
         <p className="text-center text-sm text-foreground/50">
