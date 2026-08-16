@@ -85,9 +85,8 @@ export default function ReadPage() {
           .eq('user_id', currentUser.id)
           .maybeSingle()
 
-        if (subError) {
-          console.error('订阅查询错误:', subError)
-        }
+        if (subError) console.error('订阅查询错误:', subError)
+
         if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
           subscribed = true
         }
@@ -188,7 +187,6 @@ export default function ReadPage() {
           <p key={i} className="mb-4">{p}</p>
         ))}
 
-        {/* 会员引导卡片：仅在最后一章免费章节末尾显示，且用户未订阅 */}
         {showSubscriptionCard && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
