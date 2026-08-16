@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
+// 使用 useSearchParams 的内部组件
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -144,5 +145,14 @@ export default function LoginPage() {
         {message && <p className="text-center text-sm text-red-400">{message}</p>}
       </div>
     </main>
+  )
+}
+
+// 默认导出的页面组件，用 Suspense 包裹
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-foreground/50">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   )
 }
