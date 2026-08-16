@@ -1,4 +1,31 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabaseClient'
+import { useRouter } from 'next/navigation'
+
 export default function PricingPage() {
+  const [user, setUser] = useState<any>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user || null)
+    }
+    checkUser()
+  }, [])
+
+  const handleSubscribe = (paymentLink: string) => {
+    if (!user) {
+      // 未登录 → 跳转登录页，登录后自动回到定价页
+      router.push('/login?redirect=/pricing')
+      return
+    }
+    // 已登录 → 打开支付页面
+    window.open(paymentLink, '_blank')
+  }
+
   const plans = [
     {
       name: 'Monthly',
@@ -43,13 +70,11 @@ export default function PricingPage() {
               )}
               <h3 className="text-2xl font-serif text-primary mt-4 mb-4">{plan.name}</h3>
 
-              {/* 日费突出显示 */}
               <p className="text-5xl font-bold text-foreground mb-1">
                 ${plan.dailyPrice}
                 <span className="text-xl text-foreground/50 font-normal">/day</span>
               </p>
 
-              {/* 月费/年费弱化显示 */}
               {plan.monthlyPrice && (
                 <p className="text-xs text-foreground/30 mb-1">
                   ${plan.monthlyPrice}/month
@@ -61,24 +86,20 @@ export default function PricingPage() {
                 </p>
               )}
 
-              {/* 首月优惠标签（仅月订阅有） */}
               {plan.firstMonthPrice && (
                 <p className="text-sm text-primary font-medium mt-2">
                   First month only ${plan.firstMonthPrice}
                 </p>
               )}
 
-              {/* 说明文字 */}
               <p className="text-sm text-foreground/50 mt-4 mb-6">{plan.description}</p>
 
-              <a
-                href={plan.paymentLink}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => handleSubscribe(plan.paymentLink)}
                 className="block w-full py-3 bg-primary text-background rounded-xl font-medium hover:bg-primary/90 transition text-center"
               >
                 Subscribe
-              </a>
+              </button>
             </div>
           ))}
         </div>
