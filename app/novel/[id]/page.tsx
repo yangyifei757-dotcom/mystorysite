@@ -24,7 +24,10 @@ export default function NovelPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true
+
     const fetchData = async () => {
+      // 获取小说信息
       const { data: novelData } = await supabase.from('novels').select('*').eq('id', id).single()
       const { data: chaptersData } = await supabase
         .from('chapters')
@@ -32,34 +35,44 @@ export default function NovelPage() {
         .eq('novel_id', id)
         .order('order_num', { ascending: true })
 
+      if (!isMounted) return
       setNovel(novelData)
       setChapters(chaptersData || [])
       if (novelData) document.title = `${novelData.title} - IvyNovel`
 
+      // 获取当前用户
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
 
       if (currentUser) {
-        const { data: sub, error: subError } = await supabase
+        const { data: sub } = await supabase
           .from('subscriptions')
           .select('status, current_period_end')
           .eq('user_id', currentUser.id)
           .maybeSingle()
 
-        if (subError) console.error('订阅查询错误:', subError)
-
         if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
-          setHasSubscription(true)
+          if (isMounted) setHasSubscription(true)
         }
       }
-      setLoading(false)
+
+      if (isMounted) setLoading(false)
     }
 
     fetchData()
+
+    return () => {
+      isMounted = false
+    }
   }, [id])
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-foreground/50">Loading...</div>
-  if (!novel) return <div className="min-h-screen flex items-center justify-center text-foreground/50">Novel not found</div>
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-foreground/50">Loading...</div>
+  }
+
+  if (!novel) {
+    return <div className="min-h-screen flex items-center justify-center text-foreground/50">Novel not found</div>
+  }
 
   return (
     <main className="min-h-screen bg-background pt-24 pb-16 px-4">
