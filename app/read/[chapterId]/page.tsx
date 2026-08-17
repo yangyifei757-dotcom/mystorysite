@@ -37,6 +37,8 @@ export default function ReadPage() {
   const [showTOC, setShowTOC] = useState(false)
 
   useEffect(() => {
+    let isMounted = true
+
     const checkAccess = async () => {
       const { data: chapterData, error: chapterError } = await supabase
         .from('chapters')
@@ -45,10 +47,11 @@ export default function ReadPage() {
         .single()
 
       if (chapterError || !chapterData) {
-        setLoading(false)
+        if (isMounted) setLoading(false)
         return
       }
 
+      if (!isMounted) return
       setChapter(chapterData)
       setNovel(chapterData.novel)
       const freeChapters = chapterData.novel?.free_chapters || 3
@@ -59,7 +62,7 @@ export default function ReadPage() {
         .eq('novel_id', chapterData.novel.id)
         .order('order_num', { ascending: true })
 
-      if (chaptersList) {
+      if (chaptersList && isMounted) {
         setAllChapters(chaptersList)
         const lastFree = chaptersList.filter((ch: any) => ch.order_num <= freeChapters).pop()
         if (lastFree && lastFree.id === chapterId) {
@@ -79,18 +82,18 @@ export default function ReadPage() {
           updated_at: new Date().toISOString(),
         })
 
-        const { data: sub, error: subError } = await supabase
+        const { data: sub } = await supabase
           .from('subscriptions')
           .select('status, current_period_end')
           .eq('user_id', currentUser.id)
           .maybeSingle()
 
-        if (subError) console.error('订阅查询错误:', subError)
-
         if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
           subscribed = true
         }
       }
+
+      if (!isMounted) return
       setHasSubscription(subscribed)
 
       const isFreeChapter = chapterData.order_num <= freeChapters
@@ -112,6 +115,10 @@ export default function ReadPage() {
     }
 
     checkAccess()
+
+    return () => {
+      isMounted = false
+    }
   }, [chapterId, router])
 
   const goToChapter = async (orderNum: number) => {
