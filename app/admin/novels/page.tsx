@@ -130,6 +130,30 @@ export default function AdminNovelsPage() {
     }
   }
 
+  // 新增：切换上下架状态
+  const toggleStatus = async (novel: any) => {
+    const newStatus = novel.status === 'published' ? 'draft' : 'published'
+    const adminPassword = localStorage.getItem('admin_password') || ''
+
+    const res = await fetch('/api/update-novel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: novel.id,
+        password: adminPassword,
+        status: newStatus,
+      }),
+    })
+
+    const data = await res.json()
+    if (res.ok) {
+      setMessage(`✅ ${novel.title} is now ${newStatus}`)
+      await fetchNovels()
+    } else {
+      alert('❌ ' + (data.error || 'Update failed'))
+    }
+  }
+
   const deleteNovel = async (id: string, title: string) => {
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return
     const { error } = await supabase.from('novels').delete().eq('id', id)
@@ -256,8 +280,19 @@ export default function AdminNovelsPage() {
                     </td>
                     <td className="p-3">{novel.free_chapters || 3}</td>
                     <td className="p-3">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <button onClick={() => startEdit(novel)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition">Edit</button>
+                        {/* 上下架切换按钮 */}
+                        <button
+                          onClick={() => toggleStatus(novel)}
+                          className={`text-xs px-3 py-1 rounded-full transition ${
+                            novel.status === 'published'
+                              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          }`}
+                        >
+                          {novel.status === 'published' ? '下架' : '上架'}
+                        </button>
                         <button onClick={() => deleteNovel(novel.id, novel.title)} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full hover:bg-red-200 transition">Delete</button>
                       </div>
                     </td>
