@@ -30,7 +30,6 @@ export async function POST(request: Request) {
 
     let finalCoverUrl = coverUrl || ''
 
-    // 处理新封面上传
     if (coverBase64 && coverFileName) {
       const base64Data = coverBase64.split(',')[1]
       const buffer = Buffer.from(base64Data, 'base64')
