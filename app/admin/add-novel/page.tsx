@@ -1,8 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabaseClient'
 
 export default function AddNovelPage() {
+  const router = useRouter()
   const [form, setForm] = useState({
     title: '',
     author: '',
@@ -11,13 +14,19 @@ export default function AddNovelPage() {
     tags: '',
     content: '',
     payAfterChapter: '3',
-    password: '',
   })
+  const [coverFile, setCoverFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setCoverFile(e.target.files[0])
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,6 +35,29 @@ export default function AddNovelPage() {
     setMessage('')
 
     try {
+      // 获取管理密码
+      const adminPassword = localStorage.getItem('admin_password') || ''
+
+      let coverUrl = form.coverUrl
+
+      // 如果选择了封面文件，上传到 Supabase Storage
+      if (coverFile) {
+        const fileExt = coverFile.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`
+        const { error: uploadError } = await supabase.storage
+          .from('covers')
+          .upload(fileName, coverFile, { contentType: coverFile.type })
+
+        if (uploadError) {
+          setMessage('❌ Cover upload failed: ' + uploadError.message)
+          setLoading(false)
+          return
+        }
+
+        const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName)
+        coverUrl = urlData.publicUrl
+      }
+
       const res = await fetch('/api/add-novel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -33,17 +65,19 @@ export default function AddNovelPage() {
           title: form.title,
           author: form.author,
           description: form.description,
-          coverUrl: form.coverUrl,
+          coverUrl,
           tags: form.tags,
           content: form.content,
           payAfterChapter: parseInt(form.payAfterChapter) || 3,
-          password: form.password,
+          password: adminPassword,
         }),
       })
 
       const data = await res.json()
       if (res.ok && data.message) {
         setMessage('✅ ' + data.message)
+        // 上传成功后可以跳转到管理列表
+        setTimeout(() => router.push('/admin/novels'), 1500)
       } else {
         setMessage('❌ ' + (data.error || 'Unknown error'))
       }
@@ -62,21 +96,20 @@ export default function AddNovelPage() {
           <input name="title" placeholder="Title *" value={form.title} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" required />
           <input name="author" placeholder="Author *" value={form.author} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" required />
           <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" rows={3} />
-          <input name="coverUrl" placeholder="Cover Image URL (https://...)" value={form.coverUrl} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
+          <div>
+            <label className="block text-sm mb-1 text-foreground/70">Cover Image</label>
+            <input type="file" accept="image/*" onChange={handleFileChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
+            <p className="text-xs text-foreground/50 mt-1">Upload a cover image (optional). If not uploaded, you can leave it blank.</p>
+          </div>
+          <input name="coverUrl" placeholder="Or enter cover image URL (optional)" value={form.coverUrl} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
           <input name="tags" placeholder="Tags (comma separated, e.g. romance,fantasy)" value={form.tags} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
           <div>
             <label className="block text-sm mb-1 text-foreground/70">Full Novel Text *</label>
             <textarea name="content" placeholder="Paste entire book content. Chapters should start with 'Chapter 1', 'Chapter 2', etc." value={form.content} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground font-mono text-sm" rows={20} required />
           </div>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm mb-1 text-foreground/70">Paywall starts after chapter #</label>
-              <input name="payAfterChapter" type="number" min="0" value={form.payAfterChapter} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm mb-1 text-foreground/70">Upload Password *</label>
-              <input name="password" type="password" value={form.password} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" required />
-            </div>
+          <div>
+            <label className="block text-sm mb-1 text-foreground/70">Paywall starts after chapter #</label>
+            <input name="payAfterChapter" type="number" min="0" value={form.payAfterChapter} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
           </div>
           <button type="submit" disabled={loading} className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:bg-primary/90 disabled:opacity-50">
             {loading ? 'Uploading...' : 'Upload Novel'}
