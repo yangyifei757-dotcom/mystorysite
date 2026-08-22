@@ -107,6 +107,11 @@ export default function PricingPage() {
         <p className="mt-16 text-foreground/40 text-sm">
           After payment, your account will be upgraded shortly. If you have any issues, please contact support.
         </p>
+
+        {/* 新增：取消订阅提示 */}
+        <p className="text-xs text-foreground/40 mt-4">
+          You can cancel anytime from your customer portal or order confirmation email.
+        </p>
       </div>
     </main>
   )
