@@ -24,6 +24,17 @@ export default function AdminNovelsPage() {
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [message, setMessage] = useState('')
 
+  // 自动登录：页面加载时检查 localStorage 中的密码
+  useEffect(() => {
+    const savedPassword = localStorage.getItem('admin_password')
+    if (savedPassword === ADMIN_PASSWORD) {
+      setAuthorized(true)
+      fetchNovels()
+    } else {
+      setLoading(false)
+    }
+  }, [])
+
   const fetchNovels = async () => {
     const { data, error } = await supabase
       .from('novels')
@@ -130,7 +141,7 @@ export default function AdminNovelsPage() {
     }
   }
 
-  // 新增：切换上下架状态
+  // 切换上下架状态
   const toggleStatus = async (novel: any) => {
     const newStatus = novel.status === 'published' ? 'draft' : 'published'
     const adminPassword = localStorage.getItem('admin_password') || ''
@@ -282,7 +293,6 @@ export default function AdminNovelsPage() {
                     <td className="p-3">
                       <div className="flex gap-2 flex-wrap">
                         <button onClick={() => startEdit(novel)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition">Edit</button>
-                        {/* 上下架切换按钮 */}
                         <button
                           onClick={() => toggleStatus(novel)}
                           className={`text-xs px-3 py-1 rounded-full transition ${
