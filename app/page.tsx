@@ -183,15 +183,15 @@ export default function Home() {
                   href={`/novel/${novel.id}`}
                   className="group flex gap-4 p-3 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
                 >
-                  {/* 左侧封面 */}
-                  <div className="relative w-20 h-28 md:w-24 md:h-32 flex-shrink-0 rounded-lg overflow-hidden">
+                  {/* 左侧封面，尺寸加大 */}
+                  <div className="relative w-28 h-36 md:w-32 md:h-44 flex-shrink-0 rounded-lg overflow-hidden">
                     {novel.cover_url ? (
                       <Image
                         src={novel.cover_url}
                         alt={novel.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        sizes="(max-width: 640px) 80px, 96px"
+                        sizes="(max-width: 640px) 112px, 128px"
                       />
                     ) : (
                       <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">
@@ -202,7 +202,7 @@ export default function Home() {
 
                   {/* 右侧信息 */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-serif font-bold text-foreground leading-snug mb-1">
+                    <h3 className="font-serif font-bold text-lg md:text-xl leading-tight text-foreground mb-1">
                       {novel.title}
                     </h3>
                     <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
