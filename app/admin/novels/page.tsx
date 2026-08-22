@@ -65,8 +65,14 @@ export default function AdminNovelsPage() {
   }
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setCoverFile(e.target.files[0])
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Please upload an image smaller than 2MB.')
+        e.target.value = ''
+        return
+      }
+      setCoverFile(file)
     }
   }
 
@@ -126,7 +132,6 @@ export default function AdminNovelsPage() {
 
   const deleteNovel = async (id: string, title: string) => {
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return
-    // 删除小说
     const { error } = await supabase.from('novels').delete().eq('id', id)
     if (error) {
       alert('Delete failed: ' + error.message)
@@ -186,7 +191,7 @@ export default function AdminNovelsPage() {
                 <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} className="w-full p-2 rounded bg-background border border-border text-foreground" />
               </div>
               <div>
-                <label className="block text-sm text-foreground/60 mb-1">Cover Image</label>
+                <label className="block text-sm text-foreground/60 mb-1">Cover Image (max 2MB)</label>
                 <input type="file" accept="image/*" onChange={handleCoverChange} className="w-full p-2 rounded bg-background border border-border text-foreground" />
                 {editForm.cover_url && (
                   <p className="text-xs text-foreground/50 mt-1">Current: {editForm.cover_url}</p>
