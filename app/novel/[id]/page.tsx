@@ -28,7 +28,6 @@ export default function NovelPage() {
     let isMounted = true
 
     const fetchData = async () => {
-      // 获取小说信息
       const { data: novelData } = await supabase.from('novels').select('*').eq('id', id).single()
       const { data: chaptersData } = await supabase
         .from('chapters')
@@ -41,7 +40,6 @@ export default function NovelPage() {
       setChapters(chaptersData || [])
       if (novelData) document.title = `${novelData.title} - IvyNovel`
 
-      // 获取当前用户
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
 
@@ -52,6 +50,8 @@ export default function NovelPage() {
           .from('subscriptions')
           .select('status, current_period_end')
           .eq('user_id', currentUser.id)
+          .order('current_period_end', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
         debug += `Sub: ${sub ? 'found' : 'not found'} | `
@@ -92,13 +92,12 @@ export default function NovelPage() {
 
   return (
     <main className="min-h-screen bg-background pt-24 pb-16 px-4">
-      {/* 临时调试信息 */}
+      {/* 临时调试信息，验证通过后可删除 */}
       <div style={{ background: 'yellow', color: 'black', padding: '8px', fontSize: '12px', marginBottom: '10px' }}>
         Debug: {debugInfo}
       </div>
 
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-10">
-        {/* 封面 */}
         <div className="w-full md:w-1/3">
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-card">
             {novel.cover_url ? (
@@ -114,8 +113,6 @@ export default function NovelPage() {
             )}
           </div>
         </div>
-
-        {/* 内容区 */}
         <div className="flex-1">
           <h1 className="font-serif text-4xl text-primary mb-2">{novel.title}</h1>
           <p className="text-lg text-foreground/70 mb-4">by {novel.author}</p>
