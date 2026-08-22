@@ -53,6 +53,13 @@ export default function MinePage() {
           </button>
         </div>
 
+        {/* 新增：取消订阅指引 */}
+        <div className="text-center text-xs text-foreground/50 px-4">
+          <p>
+            Need to cancel? Open your IvyNovel order confirmation email and click "View Order" to manage or cancel your subscription anytime.
+          </p>
+        </div>
+
         <p className="text-center text-xs text-foreground/40">
           By using IvyNovel, you agree to our Terms of Service and Privacy Policy.
         </p>
