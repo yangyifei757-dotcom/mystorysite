@@ -44,6 +44,23 @@ export default function ReadPage() {
 
   const loadingMoreRef = useRef(false)
 
+  // 🔒 禁止右键、复制、选择（内容保护）
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+    const handleCopy = (e: ClipboardEvent) => e.preventDefault();
+    const handleSelectStart = (e: Event) => e.preventDefault();
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('selectstart', handleSelectStart);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('selectstart', handleSelectStart);
+    };
+  }, []);
+
   useEffect(() => {
     let isMounted = true
     const checkAccess = async () => {
@@ -75,7 +92,6 @@ export default function ReadPage() {
         const lastFree = chaptersList.filter((ch: any) => ch.order_num <= free).pop()
         if (lastFree && lastFree.id === chapterId) {
           setIsLastFreeChapter(true)
-          // 如果当前就是最后免费章节，并且用户未订阅，直接显示付费墙
         }
       }
 
@@ -111,7 +127,6 @@ export default function ReadPage() {
         setCanRead(true)
         setLoadedChapters([chapterData])
         setNextOrderNum(chapterData.order_num + 1)
-        // 如果当前是最后免费章节且未订阅，显示付费墙
         if (chapterData.order_num === free && !subscribed) {
           setShowPaywall(true)
         }
@@ -149,7 +164,6 @@ export default function ReadPage() {
     const next = allChapters.find((ch: any) => ch.order_num === nextOrderNum)
     if (!next) return
 
-    // 如果下一章是付费章节且未订阅，显示付费墙并停止加载
     const isFreeNext = next.order_num <= freeChapters
     if (!isFreeNext && !hasSubscription) {
       setShowPaywall(true)
@@ -259,8 +273,13 @@ export default function ReadPage() {
         </div>
       </div>
 
-      {/* 章节内容 */}
-      <article className="max-w-2xl mx-auto px-4 pt-16 pb-32 font-serif" style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}>
+      {/* 章节内容（不可选择、不可复制） */}
+      <article
+        className="max-w-2xl mx-auto px-4 pt-16 pb-32 font-serif select-none"
+        style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}
+        onContextMenu={(e) => e.preventDefault()}
+        onCopy={(e) => e.preventDefault()}
+      >
         {loadedChapters.map((ch: any, index: number) => (
           <div key={ch.id} className={index > 0 ? 'mt-16 border-t border-border/30 pt-8' : ''}>
             <h1 className="text-2xl mb-8 font-bold">
@@ -276,7 +295,6 @@ export default function ReadPage() {
           <div className="mt-8 text-center text-foreground/40 text-sm">Loading next chapter...</div>
         )}
 
-        {/* 付费墙 */}
         {showPaywall && !hasSubscription && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
