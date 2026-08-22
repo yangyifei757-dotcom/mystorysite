@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
 
 export default function AddNovelPage() {
   const router = useRouter()
@@ -29,33 +28,33 @@ export default function AddNovelPage() {
     }
   }
 
+  // 将文件转为 base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage('')
 
     try {
-      // 获取管理密码
       const adminPassword = localStorage.getItem('admin_password') || ''
 
-      let coverUrl = form.coverUrl
+      let coverBase64 = null
+      let coverFileName = null
+      let coverFileType = null
 
-      // 如果选择了封面文件，上传到 Supabase Storage
+      // 如果选择了封面文件，转为 base64
       if (coverFile) {
-        const fileExt = coverFile.name.split('.').pop()
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`
-        const { error: uploadError } = await supabase.storage
-          .from('covers')
-          .upload(fileName, coverFile, { contentType: coverFile.type })
-
-        if (uploadError) {
-          setMessage('❌ Cover upload failed: ' + uploadError.message)
-          setLoading(false)
-          return
-        }
-
-        const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName)
-        coverUrl = urlData.publicUrl
+        coverBase64 = await fileToBase64(coverFile)
+        coverFileName = coverFile.name
+        coverFileType = coverFile.type
       }
 
       const res = await fetch('/api/add-novel', {
@@ -65,7 +64,10 @@ export default function AddNovelPage() {
           title: form.title,
           author: form.author,
           description: form.description,
-          coverUrl,
+          coverUrl: form.coverUrl,
+          coverBase64,
+          coverFileName,
+          coverFileType,
           tags: form.tags,
           content: form.content,
           payAfterChapter: parseInt(form.payAfterChapter) || 3,
@@ -76,7 +78,6 @@ export default function AddNovelPage() {
       const data = await res.json()
       if (res.ok && data.message) {
         setMessage('✅ ' + data.message)
-        // 上传成功后可以跳转到管理列表
         setTimeout(() => router.push('/admin/novels'), 1500)
       } else {
         setMessage('❌ ' + (data.error || 'Unknown error'))
