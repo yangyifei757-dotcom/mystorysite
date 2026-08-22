@@ -40,8 +40,8 @@ export default function ReadPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [nextOrderNum, setNextOrderNum] = useState<number | null>(null)
   const [freeChapters, setFreeChapters] = useState(3)
+  const [showPaywall, setShowPaywall] = useState(false) // 新增状态
 
-  // 防止重复加载
   const loadingMoreRef = useRef(false)
 
   useEffect(() => {
@@ -75,6 +75,8 @@ export default function ReadPage() {
         const lastFree = chaptersList.filter((ch: any) => ch.order_num <= free).pop()
         if (lastFree && lastFree.id === chapterId) {
           setIsLastFreeChapter(true)
+          // 如果初始章节就是最后一章免费章节，且用户未订阅，显示付费墙
+          // 但此时 hasSubscription 还没设置，所以稍后处理
         }
       }
 
@@ -104,6 +106,11 @@ export default function ReadPage() {
         }
       }
       setHasSubscription(subscribed)
+
+      // 初始判断：如果当前章节是最后免费章且用户未订阅，显示付费墙
+      if (chapterData.order_num === free && !subscribed) {
+        setShowPaywall(true)
+      }
 
       const isFreeChapter = chapterData.order_num <= free
       if (isFreeChapter) {
@@ -144,8 +151,9 @@ export default function ReadPage() {
     const next = allChapters.find((ch: any) => ch.order_num === nextOrderNum)
     if (!next) return
 
-    // 如果下一章是付费章节且未订阅，停止加载
+    // 如果下一章是付费章节且未订阅，显示付费墙并停止加载
     if (next.is_locked && !hasSubscription) {
+      setShowPaywall(true)
       return
     }
 
@@ -162,7 +170,6 @@ export default function ReadPage() {
       setLoadedChapters(prev => [...prev, data])
       setNextOrderNum(prev => (prev || 0) + 1)
 
-      // 保存阅读进度
       if (currentUser) {
         await supabase.from('reading_progress').upsert({
           user_id: currentUser.id,
@@ -188,7 +195,7 @@ export default function ReadPage() {
     }
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [nextOrderNum, hasSubscription, allChapters, loadingMore, currentUser, novel])
+  }, [nextOrderNum, hasSubscription, allChapters, loadingMore, currentUser, novel, showPaywall])
 
   const goToChapter = async (orderNum: number) => {
     if (!novel?.id) return
@@ -201,7 +208,6 @@ export default function ReadPage() {
     if (data?.id) {
       router.push(`/read/${data.id}`)
       setShowTOC(false)
-      // 重置滚动位置
       window.scrollTo(0, 0)
     }
   }
@@ -222,7 +228,6 @@ export default function ReadPage() {
   if (!canRead) return null
 
   const currentLastOrder = loadedChapters.length > 0 ? loadedChapters[loadedChapters.length - 1].order_num : chapter.order_num
-  const showSubscriptionCard = isLastFreeChapter && !hasSubscription
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
@@ -268,13 +273,12 @@ export default function ReadPage() {
           </div>
         ))}
 
-        {/* 加载中提示 */}
         {loadingMore && (
           <div className="mt-8 text-center text-foreground/40 text-sm">Loading next chapter...</div>
         )}
 
-        {/* 订阅引导卡片：最后一章免费章节末尾，且未订阅 */}
-        {showSubscriptionCard && (
+        {/* 付费墙卡片：当 showPaywall 为 true 且未订阅时显示 */}
+        {showPaywall && !hasSubscription && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
             <h3 className="text-xl font-serif text-foreground mb-2">Loved this story?</h3>
