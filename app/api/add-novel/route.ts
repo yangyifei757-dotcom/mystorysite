@@ -32,8 +32,7 @@ export async function POST(request: Request) {
 
     // 处理封面上传（如果有 base64）
     if (coverBase64 && coverFileName) {
-      // 将 Data URL 转换为 Buffer
-      const base64Data = coverBase64.split(',')[1] // 移除 data:image/png;base64, 前缀
+      const base64Data = coverBase64.split(',')[1]
       const buffer = Buffer.from(base64Data, 'base64')
 
       const fileExt = coverFileName.split('.').pop()
@@ -55,7 +54,7 @@ export async function POST(request: Request) {
       finalCoverUrl = urlData.publicUrl
     }
 
-    // 插入小说
+    // 插入小说，并设置 free_chapters
     const { data: novel, error: novelError } = await supabaseAdmin
       .from('novels')
       .insert({
@@ -65,6 +64,7 @@ export async function POST(request: Request) {
         cover_url: finalCoverUrl,
         tags: tags ? tags.split(',').map((t: string) => t.trim()) : [],
         status: 'published',
+        free_chapters: payAfterChapter || 3, // 关键：同步写入免费章节数
       })
       .select('id')
       .single()
