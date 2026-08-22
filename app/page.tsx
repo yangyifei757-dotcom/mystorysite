@@ -28,18 +28,30 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    if (novels.length === 0) return
+    if (novels.length < 3) return
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % Math.min(novels.length, 5))
+      setCurrentSlide((prev) => (prev + 1) % novels.length)
     }, 5000)
     return () => clearInterval(timer)
   }, [novels])
 
+  // 获取当前轮播的5本书
   const bannerNovels = novels.slice(0, 5)
+
+  // 根据 currentSlide 重新排列封面顺序（中间浮起效果）
+  const getBannerItems = () => {
+    if (bannerNovels.length < 3) return bannerNovels
+    const items = []
+    for (let i = -2; i <= 2; i++) {
+      const index = (currentSlide + i + bannerNovels.length) % bannerNovels.length
+      items.push({ novel: bannerNovels[index], position: i })
+    }
+    return items
+  }
 
   return (
     <main className="min-h-screen bg-background pb-20">
-      {/* 顶部导航：Logo + Pricing 入口 */}
+      {/* 顶部导航 */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
@@ -63,75 +75,83 @@ export default function Home() {
         </div>
       </header>
 
-      {/* 大封面轮播 Hero Banner */}
-      {bannerNovels.length > 0 && (
-        <section className="pt-20 pb-8 px-4">
-          <div className="max-w-7xl mx-auto relative overflow-hidden rounded-3xl shadow-card bg-[#FCF7F8]">
-            <div
-              className="flex transition-transform duration-700 ease-in-out"
-              style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-            >
-              {bannerNovels.map((novel: any) => (
+      {/* Hero Banner：五部封面轮播 */}
+      <section className="pt-20 pb-8 px-4">
+        <div className="max-w-6xl mx-auto relative overflow-hidden">
+          <div className="flex items-center justify-center gap-3 md:gap-6 h-[280px] md:h-[380px]">
+            {getBannerItems().map((item, idx) => {
+              const { novel, position } = item
+              // position: -2, -1, 0, 1, 2
+              const isCenter = position === 0
+              const isAdjacent = Math.abs(position) === 1
+              const scale = isCenter ? 1.15 : isAdjacent ? 0.95 : 0.8
+              const opacity = isCenter ? 1 : isAdjacent ? 0.6 : 0.3
+              const zIndex = isCenter ? 20 : 10 - Math.abs(position)
+              const translateY = isCenter ? -16 : 0
+
+              return (
                 <Link
                   key={novel.id}
                   href={`/novel/${novel.id}`}
-                  className="w-full flex-shrink-0 flex flex-col md:flex-row items-stretch"
+                  className="flex-shrink-0 transition-all duration-700 ease-in-out relative"
+                  style={{
+                    zIndex,
+                    opacity,
+                    transform: `scale(${scale}) translateY(${translateY}px)`,
+                  }}
                 >
-                  {/* 大封面左侧区域 */}
-                  <div className="relative w-full md:w-1/2 lg:w-2/5 aspect-[3/4] md:aspect-auto md:min-h-[480px]">
+                  <div
+                    className="rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-300"
+                    style={{
+                      width: isCenter
+                        ? '180px'
+                        : isAdjacent
+                          ? '150px'
+                          : '120px',
+                      height: isCenter
+                        ? '270px'
+                        : isAdjacent
+                          ? '225px'
+                          : '180px',
+                    }}
+                  >
                     {novel.cover_url ? (
                       <Image
                         src={novel.cover_url}
                         alt={novel.title}
                         fill
-                        className="object-cover object-top"
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        priority
+                        className="object-cover object-center"
+                        sizes="(max-width: 768px) 120px, 180px"
                       />
                     ) : (
-                      <div className="h-full w-full bg-accent flex items-center justify-center text-6xl text-primary font-serif">
+                      <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">
                         {novel.title?.charAt(0)}
                       </div>
                     )}
                   </div>
-
-                  {/* 右侧文字区域 */}
-                  <div className="flex-1 flex flex-col justify-center p-8 md:p-12 lg:p-16">
-                    <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full mb-4 self-start">
-                      Recommended
-                    </span>
-                    <h2 className="text-3xl md:text-5xl lg:text-6xl font-serif text-foreground mb-3 leading-tight">
-                      {novel.title}
-                    </h2>
-                    <p className="text-lg text-foreground/60 mb-2">by {novel.author}</p>
-                    <p className="text-foreground/70 text-base md:text-lg line-clamp-3 mb-6 max-w-xl">
-                      {novel.description}
-                    </p>
-                    <span className="inline-block self-start bg-primary text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-primary/90 transition shadow-md">
-                      Start Reading
-                    </span>
-                  </div>
                 </Link>
+              )
+            })}
+          </div>
+
+          {/* 轮播指示点 */}
+          {bannerNovels.length > 1 && (
+            <div className="flex justify-center gap-2 mt-4">
+              {bannerNovels.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`h-2 rounded-full transition-all ${
+                    idx === currentSlide
+                      ? 'w-6 bg-primary'
+                      : 'w-2 bg-primary/30'
+                  }`}
+                />
               ))}
             </div>
-
-            {/* 轮播指示点 */}
-            {bannerNovels.length > 1 && (
-              <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-                {bannerNovels.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentSlide(idx)}
-                    className={`w-2.5 h-2.5 rounded-full transition ${
-                      idx === currentSlide ? 'bg-primary scale-110' : 'bg-primary/30'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+      </section>
 
       {/* 搜索栏 */}
       <div className="max-w-6xl mx-auto px-4 pb-6">
