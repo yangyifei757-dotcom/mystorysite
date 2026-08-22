@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -28,17 +28,24 @@ export default function ReadPage() {
   const [chapter, setChapter] = useState<any>(null)
   const [novel, setNovel] = useState<any>(null)
   const [allChapters, setAllChapters] = useState<any[]>([])
+  const [loadedChapters, setLoadedChapters] = useState<any[]>([])
   const [canRead, setCanRead] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [fontSize, setFontSize] = useState(18)
   const [bgMode, setBgMode] = useState<keyof typeof BG_STYLES>('warm')
   const [hasSubscription, setHasSubscription] = useState(false)
   const [isLastFreeChapter, setIsLastFreeChapter] = useState(false)
   const [showTOC, setShowTOC] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [nextOrderNum, setNextOrderNum] = useState<number | null>(null)
+  const [freeChapters, setFreeChapters] = useState(3)
+
+  // 防止重复加载
+  const loadingMoreRef = useRef(false)
 
   useEffect(() => {
     let isMounted = true
-
     const checkAccess = async () => {
       const { data: chapterData, error: chapterError } = await supabase
         .from('chapters')
@@ -54,7 +61,8 @@ export default function ReadPage() {
       if (!isMounted) return
       setChapter(chapterData)
       setNovel(chapterData.novel)
-      const freeChapters = chapterData.novel?.free_chapters || 3
+      const free = chapterData.novel?.free_chapters || 3
+      setFreeChapters(free)
 
       const { data: chaptersList } = await supabase
         .from('chapters')
@@ -64,19 +72,20 @@ export default function ReadPage() {
 
       if (chaptersList && isMounted) {
         setAllChapters(chaptersList)
-        const lastFree = chaptersList.filter((ch: any) => ch.order_num <= freeChapters).pop()
+        const lastFree = chaptersList.filter((ch: any) => ch.order_num <= free).pop()
         if (lastFree && lastFree.id === chapterId) {
           setIsLastFreeChapter(true)
         }
       }
 
       const { data: { session } } = await supabase.auth.getSession()
-      const currentUser = session?.user || null
+      const user = session?.user || null
+      setCurrentUser(user)
 
       let subscribed = false
-      if (currentUser) {
+      if (user) {
         await supabase.from('reading_progress').upsert({
-          user_id: currentUser.id,
+          user_id: user.id,
           chapter_id: chapterId,
           progress: 0,
           updated_at: new Date().toISOString(),
@@ -85,7 +94,7 @@ export default function ReadPage() {
         const { data: sub } = await supabase
           .from('subscriptions')
           .select('status, current_period_end')
-          .eq('user_id', currentUser.id)
+          .eq('user_id', user.id)
           .order('current_period_end', { ascending: false })
           .limit(1)
           .maybeSingle()
@@ -94,15 +103,15 @@ export default function ReadPage() {
           subscribed = true
         }
       }
-
-      if (!isMounted) return
       setHasSubscription(subscribed)
 
-      const isFreeChapter = chapterData.order_num <= freeChapters
+      const isFreeChapter = chapterData.order_num <= free
       if (isFreeChapter) {
         setCanRead(true)
+        setLoadedChapters([chapterData])
+        setNextOrderNum(chapterData.order_num + 1)
       } else {
-        if (!currentUser) {
+        if (!user) {
           router.push('/pricing?message=Please login to read')
           return
         }
@@ -111,6 +120,8 @@ export default function ReadPage() {
           return
         }
         setCanRead(true)
+        setLoadedChapters([chapterData])
+        setNextOrderNum(chapterData.order_num + 1)
       }
 
       setLoading(false)
@@ -123,6 +134,62 @@ export default function ReadPage() {
     }
   }, [chapterId, router])
 
+  const loadNextChapter = async () => {
+    if (loadingMoreRef.current) return
+    if (!nextOrderNum || !novel?.id || allChapters.length === 0) return
+
+    const maxOrder = Math.max(...allChapters.map((ch: any) => ch.order_num))
+    if (nextOrderNum > maxOrder) return
+
+    const next = allChapters.find((ch: any) => ch.order_num === nextOrderNum)
+    if (!next) return
+
+    // 如果下一章是付费章节且未订阅，停止加载
+    if (next.is_locked && !hasSubscription) {
+      return
+    }
+
+    loadingMoreRef.current = true
+    setLoadingMore(true)
+
+    const { data } = await supabase
+      .from('chapters')
+      .select('*, novel:novel_id(*)')
+      .eq('id', next.id)
+      .single()
+
+    if (data) {
+      setLoadedChapters(prev => [...prev, data])
+      setNextOrderNum(prev => (prev || 0) + 1)
+
+      // 保存阅读进度
+      if (currentUser) {
+        await supabase.from('reading_progress').upsert({
+          user_id: currentUser.id,
+          chapter_id: data.id,
+          progress: 0,
+          updated_at: new Date().toISOString(),
+        })
+      }
+    }
+
+    loadingMoreRef.current = false
+    setLoadingMore(false)
+  }
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop
+      const scrollHeight = document.documentElement.scrollHeight
+      const clientHeight = window.innerHeight
+      if (scrollTop + clientHeight >= scrollHeight - 100) {
+        loadNextChapter()
+      }
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [nextOrderNum, hasSubscription, allChapters, loadingMore, currentUser, novel])
+
   const goToChapter = async (orderNum: number) => {
     if (!novel?.id) return
     const { data } = await supabase
@@ -134,6 +201,8 @@ export default function ReadPage() {
     if (data?.id) {
       router.push(`/read/${data.id}`)
       setShowTOC(false)
+      // 重置滚动位置
+      window.scrollTo(0, 0)
     }
   }
 
@@ -152,9 +221,8 @@ export default function ReadPage() {
 
   if (!canRead) return null
 
-  const paragraphs = chapter.content?.split('\n').filter(Boolean) || []
-  const currentIndex = chapter.order_num
-  const showSubscriptionCard = chapter.order_num <= (novel?.free_chapters || 3) && isLastFreeChapter && !hasSubscription
+  const currentLastOrder = loadedChapters.length > 0 ? loadedChapters[loadedChapters.length - 1].order_num : chapter.order_num
+  const showSubscriptionCard = isLastFreeChapter && !hasSubscription
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
@@ -187,15 +255,25 @@ export default function ReadPage() {
         </div>
       </div>
 
-      {/* 章节内容 */}
+      {/* 章节内容：循环渲染已加载的章节 */}
       <article className="max-w-2xl mx-auto px-4 pt-16 pb-32 font-serif" style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}>
-        <h1 className="text-2xl mb-8 font-bold">
-          {formatChapterTitle(chapter.order_num, chapter.title)}
-        </h1>
-        {paragraphs.map((p: string, i: number) => (
-          <p key={i} className="mb-4">{p}</p>
+        {loadedChapters.map((ch: any, index: number) => (
+          <div key={ch.id} className={index > 0 ? 'mt-16 border-t border-border/30 pt-8' : ''}>
+            <h1 className="text-2xl mb-8 font-bold">
+              {formatChapterTitle(ch.order_num, ch.title)}
+            </h1>
+            {ch.content?.split('\n').filter(Boolean).map((p: string, i: number) => (
+              <p key={i} className="mb-4">{p}</p>
+            ))}
+          </div>
         ))}
 
+        {/* 加载中提示 */}
+        {loadingMore && (
+          <div className="mt-8 text-center text-foreground/40 text-sm">Loading next chapter...</div>
+        )}
+
+        {/* 订阅引导卡片：最后一章免费章节末尾，且未订阅 */}
         {showSubscriptionCard && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
@@ -216,15 +294,25 @@ export default function ReadPage() {
       {/* 底部导航 */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border px-4 py-3 flex justify-between items-center">
         <button
-          onClick={() => goToChapter(currentIndex - 1)}
-          disabled={currentIndex <= 1}
+          onClick={() => goToChapter(currentLastOrder - 1)}
+          disabled={currentLastOrder <= 1}
           className="px-4 py-2 text-sm rounded-full border border-primary/30 text-primary disabled:opacity-30 hover:bg-primary/5 transition"
         >
           ← Previous
         </button>
-        <span className="text-xs text-foreground/50">Ch. {currentIndex}</span>
+        <span className="text-xs text-foreground/50">Ch. {currentLastOrder}</span>
         <button
-          onClick={() => goToChapter(currentIndex + 1)}
+          onClick={() => {
+            const maxOrder = Math.max(...allChapters.map((ch: any) => ch.order_num))
+            if (currentLastOrder < maxOrder) {
+              const next = allChapters.find((ch: any) => ch.order_num === currentLastOrder + 1)
+              if (next && next.is_locked && !hasSubscription) {
+                router.push('/pricing')
+              } else {
+                goToChapter(currentLastOrder + 1)
+              }
+            }
+          }}
           className="px-4 py-2 text-sm rounded-full bg-primary text-white hover:bg-primary/90 transition"
         >
           Next →
