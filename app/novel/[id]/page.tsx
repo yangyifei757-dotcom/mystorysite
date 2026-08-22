@@ -22,6 +22,7 @@ export default function NovelPage() {
   const [chapters, setChapters] = useState<any[]>([])
   const [hasSubscription, setHasSubscription] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [debugInfo, setDebugInfo] = useState<string>('')
 
   useEffect(() => {
     let isMounted = true
@@ -44,19 +45,34 @@ export default function NovelPage() {
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
 
+      let debug = `User: ${currentUser ? currentUser.email : 'Not logged in'} | `
+
       if (currentUser) {
-        const { data: sub } = await supabase
+        const { data: sub, error: subError } = await supabase
           .from('subscriptions')
           .select('status, current_period_end')
           .eq('user_id', currentUser.id)
           .maybeSingle()
 
+        debug += `Sub: ${sub ? 'found' : 'not found'} | `
+        if (subError) {
+          debug += `Error: ${subError.message} | `
+        }
         if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
           if (isMounted) setHasSubscription(true)
+          debug += 'Active ✅'
+        } else if (sub) {
+          debug += `Status: ${sub.status} | End: ${sub.current_period_end} | `
+          debug += `Now: ${new Date().toISOString()} | Valid: ${new Date(sub.current_period_end) > new Date() ? 'yes' : 'no'}`
         }
+      } else {
+        debug += 'No user session'
       }
 
-      if (isMounted) setLoading(false)
+      if (isMounted) {
+        setDebugInfo(debug)
+        setLoading(false)
+      }
     }
 
     fetchData()
@@ -76,7 +92,13 @@ export default function NovelPage() {
 
   return (
     <main className="min-h-screen bg-background pt-24 pb-16 px-4">
+      {/* 临时调试信息 */}
+      <div style={{ background: 'yellow', color: 'black', padding: '8px', fontSize: '12px', marginBottom: '10px' }}>
+        Debug: {debugInfo}
+      </div>
+
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-10">
+        {/* 封面 */}
         <div className="w-full md:w-1/3">
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-card">
             {novel.cover_url ? (
@@ -92,6 +114,8 @@ export default function NovelPage() {
             )}
           </div>
         </div>
+
+        {/* 内容区 */}
         <div className="flex-1">
           <h1 className="font-serif text-4xl text-primary mb-2">{novel.title}</h1>
           <p className="text-lg text-foreground/70 mb-4">by {novel.author}</p>
