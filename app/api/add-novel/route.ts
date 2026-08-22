@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const UPLOAD_PASSWORD = 'mynovel2026' // 你可以改成自己的密码
+const UPLOAD_PASSWORD = 'mynovel2026' // 可以改成你自己的密码
 
 export async function POST(request: Request) {
   try {
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         description: description || '',
         cover_url: finalCoverUrl,
         tags: tags ? tags.split(',').map((t: string) => t.trim()) : [],
-        status: 'published', // 改为了 published
+        status: 'published', // 改为 published，上传后直接显示
       })
       .select('id')
       .single()
@@ -53,14 +53,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No chapters found. Make sure content contains "Chapter 1", "Chapter 2", etc.' }, { status: 400 })
     }
 
-    // 7. 批量插入章节
+    // 7. 批量插入章节，根据 payAfterChapter 设置 is_locked
     const payAfter = payAfterChapter || 3
     const chapterRows = chapters.map((ch, index) => ({
       novel_id: novel.id,
       title: ch.title,
       content: ch.body,
       order_num: index + 1,
-      is_locked: index >= payAfter,
+      is_locked: index >= payAfter, // 前 payAfter 章免费
       coin_price: 10,
     }))
 
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      message: `✅ Success! "${title}" uploaded with ${chapters.length} chapters.`,
+      message: `Novel "${title}" uploaded with ${chapters.length} chapters!`,
     })
 
   } catch (err: any) {
@@ -81,7 +81,6 @@ export async function POST(request: Request) {
 
 // 简单的章节拆分函数
 function splitChapters(text: string): { title: string; body: string }[] {
-  // 按 "Chapter 1", "Chapter 2" ... 拆分
   const regex = /(Chapter\s+\d+[^\n]*)/gi
   const parts = text.split(regex).filter(s => s.trim().length > 0)
 
