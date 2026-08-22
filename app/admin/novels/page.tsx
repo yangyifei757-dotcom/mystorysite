@@ -70,27 +70,27 @@ export default function AdminNovelsPage() {
     }
   }
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
   const saveEdit = async () => {
     if (!editingNovel) return
     setMessage('Saving...')
 
-    let finalCoverUrl = editForm.cover_url
+    let coverBase64 = null
+    let coverFileName = null
+    let coverFileType = null
 
-    // 如果选择了新封面，上传
     if (coverFile) {
-      const fileExt = coverFile.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`
-      const { error: uploadError } = await supabase.storage
-        .from('covers')
-        .upload(fileName, coverFile, { contentType: coverFile.type })
-
-      if (uploadError) {
-        setMessage('❌ Cover upload failed: ' + uploadError.message)
-        return
-      }
-
-      const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName)
-      finalCoverUrl = urlData.publicUrl
+      coverBase64 = await fileToBase64(coverFile)
+      coverFileName = coverFile.name
+      coverFileType = coverFile.type
     }
 
     const adminPassword = localStorage.getItem('admin_password') || ''
@@ -104,7 +104,10 @@ export default function AdminNovelsPage() {
         title: editForm.title,
         author: editForm.author,
         description: editForm.description,
-        coverUrl: finalCoverUrl,
+        coverUrl: editForm.cover_url,
+        coverBase64,
+        coverFileName,
+        coverFileType,
         tags: editForm.tags,
         status: editForm.status,
         freeChapters: editForm.free_chapters,
@@ -123,6 +126,7 @@ export default function AdminNovelsPage() {
 
   const deleteNovel = async (id: string, title: string) => {
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return
+    // 删除小说
     const { error } = await supabase.from('novels').delete().eq('id', id)
     if (error) {
       alert('Delete failed: ' + error.message)
