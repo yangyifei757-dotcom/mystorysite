@@ -22,8 +22,6 @@ export default function NovelPage() {
   const [chapters, setChapters] = useState<any[]>([])
   const [hasSubscription, setHasSubscription] = useState(false)
   const [loading, setLoading] = useState(true)
-
-  // 新增：推荐小说列表
   const [recommendations, setRecommendations] = useState<any[]>([])
 
   useEffect(() => {
@@ -43,7 +41,7 @@ export default function NovelPage() {
       setChapters(chaptersData || [])
       if (novelData) document.title = `${novelData.title} - IvyNovel`
 
-      // 获取当前登录用户订阅状态
+      // 获取当前用户订阅状态
       const { data: { session } } = await supabase.auth.getSession()
       const currentUser = session?.user || null
 
@@ -61,9 +59,8 @@ export default function NovelPage() {
         }
       }
 
-      // 获取推荐小说
+      // 获取推荐小说（最多6部）
       if (novelData) {
-        // 优先推荐相同标签的小说，排除当前小说
         const tags = novelData.tags || []
         let recommendationsData: any[] = []
 
@@ -74,13 +71,12 @@ export default function NovelPage() {
             .eq('status', 'published')
             .neq('id', id)
             .overlaps('tags', tags)
-            .limit(8)
+            .limit(6)
 
           recommendationsData = similar || []
         }
 
-        // 如果推荐不足，用最新小说补齐
-        if (recommendationsData.length < 8) {
+        if (recommendationsData.length < 6) {
           const existingIds = recommendationsData.map((n: any) => n.id)
           const { data: latest } = await supabase
             .from('novels')
@@ -89,12 +85,12 @@ export default function NovelPage() {
             .neq('id', id)
             .not('id', 'in', `(${existingIds.join(',')})`)
             .order('created_at', { ascending: false })
-            .limit(8 - recommendationsData.length)
+            .limit(6 - recommendationsData.length)
 
           if (latest) recommendationsData = [...recommendationsData, ...latest]
         }
 
-        if (isMounted) setRecommendations(recommendationsData.slice(0, 8))
+        if (isMounted) setRecommendations(recommendationsData.slice(0, 6))
       }
 
       if (isMounted) setLoading(false)
@@ -177,16 +173,16 @@ export default function NovelPage() {
         </div>
       </div>
 
-      {/* 推荐区域：You may also like */}
+      {/* 推荐区域：You may also like，网格布局 */}
       {recommendations.length > 0 && (
         <div className="max-w-6xl mx-auto mt-16">
           <h2 className="text-2xl md:text-3xl font-serif text-foreground mb-6">You may also like</h2>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
             {recommendations.map((rec: any) => (
               <Link
                 key={rec.id}
                 href={`/novel/${rec.id}`}
-                className="flex-shrink-0 w-32 md:w-40 group"
+                className="group flex flex-col"
               >
                 <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300">
                   {rec.cover_url ? (
@@ -195,7 +191,7 @@ export default function NovelPage() {
                       alt={rec.title}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      sizes="(max-width: 768px) 128px, 160px"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     />
                   ) : (
                     <div className="h-full w-full bg-accent flex items-center justify-center text-3xl text-primary font-serif">
@@ -203,7 +199,7 @@ export default function NovelPage() {
                     </div>
                   )}
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 px-1">
                   <h3 className="font-serif text-sm font-medium text-foreground line-clamp-1">{rec.title}</h3>
                   <p className="text-xs text-foreground/50">{rec.author}</p>
                 </div>
