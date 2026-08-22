@@ -86,6 +86,8 @@ export default function ReadPage() {
           .from('subscriptions')
           .select('status, current_period_end')
           .eq('user_id', currentUser.id)
+          .order('current_period_end', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
         if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
