@@ -17,7 +17,7 @@ export default function AdminNovelsPage() {
     author: '',
     description: '',
     cover_url: '',
-    tags: '',
+    tags: 'Romance', // 默认 Romance
     status: 'published',
     free_chapters: 3,
   })
@@ -63,7 +63,7 @@ export default function AdminNovelsPage() {
       author: novel.author || '',
       description: novel.description || '',
       cover_url: novel.cover_url || '',
-      tags: Array.isArray(novel.tags) ? novel.tags.join(',') : novel.tags || '',
+      tags: Array.isArray(novel.tags) ? (novel.tags[0] || 'Romance') : (novel.tags || 'Romance'),
       status: novel.status || 'draft',
       free_chapters: novel.free_chapters || 3,
     })
@@ -125,7 +125,7 @@ export default function AdminNovelsPage() {
         coverBase64,
         coverFileName,
         coverFileType,
-        tags: editForm.tags,
+        tags: editForm.tags, // 字符串直接传递，后端会转为数组
         status: editForm.status,
         freeChapters: editForm.free_chapters,
       }),
@@ -233,8 +233,18 @@ export default function AdminNovelsPage() {
                 )}
               </div>
               <div>
-                <label className="block text-sm text-foreground/60 mb-1">Tags (comma separated)</label>
-                <input value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="w-full p-2 rounded bg-background border border-border text-foreground" />
+                <label className="block text-sm text-foreground/60 mb-1">Tag (single select)</label>
+                <select
+                  value={editForm.tags}
+                  onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                  className="w-full p-2 rounded bg-background border border-border text-foreground"
+                >
+                  <option value="Romance">Romance</option>
+                  <option value="Mafia">Mafia</option>
+                  <option value="Werewolf">Werewolf</option>
+                  <option value="Steamy">Steamy</option>
+                  <option value="Urban">Urban</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm text-foreground/60 mb-1">Status</label>
