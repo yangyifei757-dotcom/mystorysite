@@ -21,6 +21,7 @@ export default function AdminNovelsPage() {
     status: 'published',
     free_chapters: 3,
   })
+  const [coverFile, setCoverFile] = useState<File | null>(null)
   const [message, setMessage] = useState('')
 
   const fetchNovels = async () => {
@@ -37,6 +38,7 @@ export default function AdminNovelsPage() {
   const handleLogin = async () => {
     if (passwordInput === ADMIN_PASSWORD) {
       setAuthorized(true)
+      localStorage.setItem('admin_password', passwordInput)
       await fetchNovels()
     } else {
       alert('Wrong password')
@@ -54,6 +56,7 @@ export default function AdminNovelsPage() {
       status: novel.status || 'draft',
       free_chapters: novel.free_chapters || 3,
     })
+    setCoverFile(null)
     setMessage('')
   }
 
@@ -61,24 +64,53 @@ export default function AdminNovelsPage() {
     setEditingNovel(null)
   }
 
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setCoverFile(e.target.files[0])
+    }
+  }
+
   const saveEdit = async () => {
     if (!editingNovel) return
     setMessage('Saving...')
+
+    let finalCoverUrl = editForm.cover_url
+
+    // 如果选择了新封面，上传
+    if (coverFile) {
+      const fileExt = coverFile.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`
+      const { error: uploadError } = await supabase.storage
+        .from('covers')
+        .upload(fileName, coverFile, { contentType: coverFile.type })
+
+      if (uploadError) {
+        setMessage('❌ Cover upload failed: ' + uploadError.message)
+        return
+      }
+
+      const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName)
+      finalCoverUrl = urlData.publicUrl
+    }
+
+    const adminPassword = localStorage.getItem('admin_password') || ''
+
     const res = await fetch('/api/update-novel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: editingNovel.id,
-        password: ADMIN_PASSWORD,
+        password: adminPassword,
         title: editForm.title,
         author: editForm.author,
         description: editForm.description,
-        coverUrl: editForm.cover_url,
+        coverUrl: finalCoverUrl,
         tags: editForm.tags,
         status: editForm.status,
         freeChapters: editForm.free_chapters,
       }),
     })
+
     const data = await res.json()
     if (res.ok) {
       setMessage('✅ Updated successfully')
@@ -139,65 +171,37 @@ export default function AdminNovelsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-foreground/60 mb-1">Title</label>
-                <input
-                  value={editForm.title}
-                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                  className="w-full p-2 rounded bg-background border border-border text-foreground"
-                />
+                <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full p-2 rounded bg-background border border-border text-foreground" />
               </div>
               <div>
                 <label className="block text-sm text-foreground/60 mb-1">Author</label>
-                <input
-                  value={editForm.author}
-                  onChange={(e) => setEditForm({ ...editForm, author: e.target.value })}
-                  className="w-full p-2 rounded bg-background border border-border text-foreground"
-                />
+                <input value={editForm.author} onChange={(e) => setEditForm({ ...editForm, author: e.target.value })} className="w-full p-2 rounded bg-background border border-border text-foreground" />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm text-foreground/60 mb-1">Description</label>
-                <textarea
-                  value={editForm.description}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                  rows={3}
-                  className="w-full p-2 rounded bg-background border border-border text-foreground"
-                />
+                <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} className="w-full p-2 rounded bg-background border border-border text-foreground" />
               </div>
               <div>
-                <label className="block text-sm text-foreground/60 mb-1">Cover URL</label>
-                <input
-                  value={editForm.cover_url}
-                  onChange={(e) => setEditForm({ ...editForm, cover_url: e.target.value })}
-                  className="w-full p-2 rounded bg-background border border-border text-foreground"
-                />
+                <label className="block text-sm text-foreground/60 mb-1">Cover Image</label>
+                <input type="file" accept="image/*" onChange={handleCoverChange} className="w-full p-2 rounded bg-background border border-border text-foreground" />
+                {editForm.cover_url && (
+                  <p className="text-xs text-foreground/50 mt-1">Current: {editForm.cover_url}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm text-foreground/60 mb-1">Tags (comma separated)</label>
-                <input
-                  value={editForm.tags}
-                  onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
-                  className="w-full p-2 rounded bg-background border border-border text-foreground"
-                />
+                <input value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="w-full p-2 rounded bg-background border border-border text-foreground" />
               </div>
               <div>
                 <label className="block text-sm text-foreground/60 mb-1">Status</label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className="w-full p-2 rounded bg-background border border-border text-foreground"
-                >
+                <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className="w-full p-2 rounded bg-background border border-border text-foreground">
                   <option value="published">Published</option>
                   <option value="draft">Draft (Hidden)</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm text-foreground/60 mb-1">Free Chapters</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editForm.free_chapters}
-                  onChange={(e) => setEditForm({ ...editForm, free_chapters: e.target.value })}
-                  className="w-full p-2 rounded bg-background border border-border text-foreground"
-                />
+                <input type="number" min="0" value={editForm.free_chapters} onChange={(e) => setEditForm({ ...editForm, free_chapters: e.target.value })} className="w-full p-2 rounded bg-background border border-border text-foreground" />
               </div>
             </div>
             <div className="flex gap-3 mt-4">
