@@ -1,35 +1,61 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const UPLOAD_PASSWORD = 'mynovel2026' // 可以改成你自己的密码
+const UPLOAD_PASSWORD = 'mynovel2026'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { title, author, description, coverUrl, tags, content, payAfterChapter, password } = body
+    const {
+      title, author, description, coverUrl,
+      coverBase64, coverFileName, coverFileType,
+      tags, content, payAfterChapter, password
+    } = body
 
-    // 1. 密码验证
     if (password !== UPLOAD_PASSWORD) {
       return NextResponse.json({ error: 'Incorrect upload password.' }, { status: 401 })
     }
 
-    // 2. 基本字段验证
     if (!title || !author || !content) {
       return NextResponse.json({ error: 'Title, author, and content are required.' }, { status: 400 })
     }
 
-    // 3. 初始化 Supabase 管理员客户端
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!supabaseUrl || !serviceRoleKey) {
       return NextResponse.json({ error: 'Server configuration error: Missing Supabase keys.' }, { status: 500 })
     }
+
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
 
-    // 4. 处理封面 URL（如果没填，用随机图）
-    const finalCoverUrl = coverUrl || 'https://picsum.photos/400/600'
+    let finalCoverUrl = coverUrl || ''
 
-    // 5. 插入小说，默认状态设为 published
+    // 处理封面上传（如果有 base64）
+    if (coverBase64 && coverFileName) {
+      // 将 Data URL 转换为 Buffer
+      const base64Data = coverBase64.split(',')[1] // 移除 data:image/png;base64, 前缀
+      const buffer = Buffer.from(base64Data, 'base64')
+
+      const fileExt = coverFileName.split('.').pop()
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`
+      const contentType = coverFileType || 'image/jpeg'
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from('covers')
+        .upload(uniqueName, buffer, {
+          contentType,
+          upsert: false,
+        })
+
+      if (uploadError) {
+        return NextResponse.json({ error: 'Cover upload failed: ' + uploadError.message }, { status: 500 })
+      }
+
+      const { data: urlData } = supabaseAdmin.storage.from('covers').getPublicUrl(uniqueName)
+      finalCoverUrl = urlData.publicUrl
+    }
+
+    // 插入小说
     const { data: novel, error: novelError } = await supabaseAdmin
       .from('novels')
       .insert({
@@ -38,7 +64,7 @@ export async function POST(request: Request) {
         description: description || '',
         cover_url: finalCoverUrl,
         tags: tags ? tags.split(',').map((t: string) => t.trim()) : [],
-        status: 'published', // 改为 published，上传后直接显示
+        status: 'published',
       })
       .select('id')
       .single()
@@ -47,20 +73,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to insert novel: ' + (novelError?.message || 'No data') }, { status: 500 })
     }
 
-    // 6. 拆分章节（按 "Chapter X" 格式）
+    // 拆分章节
     const chapters = splitChapters(content)
     if (chapters.length === 0) {
       return NextResponse.json({ error: 'No chapters found. Make sure content contains "Chapter 1", "Chapter 2", etc.' }, { status: 400 })
     }
 
-    // 7. 批量插入章节，根据 payAfterChapter 设置 is_locked
     const payAfter = payAfterChapter || 3
     const chapterRows = chapters.map((ch, index) => ({
       novel_id: novel.id,
       title: ch.title,
       content: ch.body,
       order_num: index + 1,
-      is_locked: index >= payAfter, // 前 payAfter 章免费
+      is_locked: index >= payAfter,
       coin_price: 10,
     }))
 
@@ -79,7 +104,6 @@ export async function POST(request: Request) {
   }
 }
 
-// 简单的章节拆分函数
 function splitChapters(text: string): { title: string; body: string }[] {
   const regex = /(Chapter\s+\d+[^\n]*)/gi
   const parts = text.split(regex).filter(s => s.trim().length > 0)
@@ -93,7 +117,6 @@ function splitChapters(text: string): { title: string; body: string }[] {
     }
   }
 
-  // 如果没拆出任何章节，把全文当第一章
   if (chapters.length === 0 && text.trim().length > 0) {
     chapters.push({ title: 'Chapter 1', body: text.trim() })
   }
