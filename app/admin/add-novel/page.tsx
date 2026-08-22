@@ -10,7 +10,7 @@ export default function AddNovelPage() {
     author: '',
     description: '',
     coverUrl: '',
-    tags: '',
+    tags: 'Romance', // 默认选中 Romance
     content: '',
     payAfterChapter: '3',
   })
@@ -18,7 +18,7 @@ export default function AddNovelPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
@@ -73,7 +73,7 @@ export default function AddNovelPage() {
           coverBase64,
           coverFileName,
           coverFileType,
-          tags: form.tags,
+          tags: form.tags, // 单选值
           content: form.content,
           payAfterChapter: parseInt(form.payAfterChapter) || 3,
           password: adminPassword,
@@ -108,7 +108,16 @@ export default function AddNovelPage() {
             <p className="text-xs text-foreground/50 mt-1">Upload a cover image. If not uploaded, a random image will be used.</p>
           </div>
           <input name="coverUrl" placeholder="Or enter cover image URL (optional)" value={form.coverUrl} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
-          <input name="tags" placeholder="Tags (comma separated, e.g. romance,fantasy)" value={form.tags} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
+          <div>
+            <label className="block text-sm mb-1 text-foreground/70">Tag (single select)</label>
+            <select name="tags" value={form.tags} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground">
+              <option value="Romance">Romance</option>
+              <option value="Mafia">Mafia</option>
+              <option value="Werewolf">Werewolf</option>
+              <option value="Steamy">Steamy</option>
+              <option value="Urban">Urban</option>
+            </select>
+          </div>
           <div>
             <label className="block text-sm mb-1 text-foreground/70">Full Novel Text *</label>
             <textarea name="content" placeholder="Paste entire book content. Chapters should start with 'Chapter 1', 'Chapter 2', etc." value={form.content} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground font-mono text-sm" rows={20} required />
