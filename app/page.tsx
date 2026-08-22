@@ -162,7 +162,7 @@ export default function Home() {
         </form>
       </div>
 
-      {/* Recommend 区域（原 You May Like） */}
+      {/* Recommend 区域 */}
       <section className="max-w-6xl mx-auto px-4 pb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl md:text-3xl font-serif text-foreground">Recommend</h2>
@@ -202,7 +202,7 @@ export default function Home() {
 
                   {/* 右侧信息 */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-serif font-bold text-lg md:text-xl leading-tight text-foreground mb-1">
+                    <h3 className="font-sans font-black text-xl md:text-2xl tracking-tight text-foreground leading-tight mb-1">
                       {novel.title}
                     </h3>
                     <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
