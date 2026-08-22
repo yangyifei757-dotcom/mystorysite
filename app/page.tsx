@@ -35,10 +35,8 @@ export default function Home() {
     return () => clearInterval(timer)
   }, [novels])
 
-  // 获取当前轮播的5本书
   const bannerNovels = novels.slice(0, 5)
 
-  // 根据 currentSlide 重新排列封面顺序（中间浮起效果）
   const getBannerItems = () => {
     if (bannerNovels.length < 3) return bannerNovels
     const items = []
@@ -102,16 +100,8 @@ export default function Home() {
                   <div
                     className="rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-300"
                     style={{
-                      width: isCenter
-                        ? '220px'
-                        : isAdjacent
-                          ? '170px'
-                          : '130px',
-                      height: isCenter
-                        ? '330px'
-                        : isAdjacent
-                          ? '255px'
-                          : '195px',
+                      width: isCenter ? '220px' : isAdjacent ? '170px' : '130px',
+                      height: isCenter ? '330px' : isAdjacent ? '255px' : '195px',
                     }}
                   >
                     {novel.cover_url ? (
@@ -141,9 +131,7 @@ export default function Home() {
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
                   className={`h-2 rounded-full transition-all ${
-                    idx === currentSlide
-                      ? 'w-6 bg-primary'
-                      : 'w-2 bg-primary/30'
+                    idx === currentSlide ? 'w-6 bg-primary' : 'w-2 bg-primary/30'
                   }`}
                 />
               ))}
@@ -168,55 +156,68 @@ export default function Home() {
             placeholder="Search novels or authors..."
             className="flex-1 p-3 rounded-xl border border-border bg-white text-foreground text-sm focus:outline-none focus:border-primary"
           />
-          <button
-            type="submit"
-            className="px-5 py-3 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition"
-          >
+          <button type="submit" className="px-5 py-3 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition">
             Search
           </button>
         </form>
       </div>
 
-      {/* You May Like 区域 */}
+      {/* Recommend 区域（原 You May Like） */}
       <section className="max-w-6xl mx-auto px-4 pb-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl md:text-3xl font-serif text-foreground">You May Like</h2>
+          <h2 className="text-2xl md:text-3xl font-serif text-foreground">Recommend</h2>
         </div>
+
         {novels.length === 0 ? (
           <div className="text-center py-20 text-foreground/40 bg-card rounded-2xl shadow-card">
             <p className="text-lg">✨ Our stories are brewing...</p>
             <p className="text-sm mt-2">Check back soon for handpicked romantic tales.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {novels.map((novel: any) => (
-              <Link key={novel.id} href={`/novel/${novel.id}`} className="group flex flex-col">
-                <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300">
-                  {novel.cover_url ? (
-                    <Image
-                      src={novel.cover_url}
-                      alt={novel.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">
-                      {novel.title?.charAt(0)}
-                    </div>
-                  )}
-                  {novel.tags?.[0] && (
-                    <span className="absolute top-2 left-2 bg-white/90 text-foreground text-[10px] px-1.5 py-0.5 rounded-md shadow z-10">
-                      {novel.tags[0]}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2 px-1">
-                  <h3 className="font-serif text-sm font-medium text-foreground line-clamp-1">{novel.title}</h3>
-                  <p className="text-xs text-foreground/50 mt-0.5">{novel.author}</p>
-                </div>
-              </Link>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {novels.map((novel: any) => {
+              const tag = Array.isArray(novel.tags) ? novel.tags[0] : novel.tags
+              return (
+                <Link
+                  key={novel.id}
+                  href={`/novel/${novel.id}`}
+                  className="group flex gap-4 p-3 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
+                >
+                  {/* 左侧封面 */}
+                  <div className="relative w-20 h-28 md:w-24 md:h-32 flex-shrink-0 rounded-lg overflow-hidden">
+                    {novel.cover_url ? (
+                      <Image
+                        src={novel.cover_url}
+                        alt={novel.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        sizes="(max-width: 640px) 80px, 96px"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">
+                        {novel.title?.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 右侧信息 */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-serif font-bold text-foreground leading-snug mb-1">
+                      {novel.title}
+                    </h3>
+                    <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
+                    {tag && (
+                      <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mb-2">
+                        {tag}
+                      </span>
+                    )}
+                    <p className="text-sm text-foreground/60 line-clamp-2">
+                      {novel.description}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         )}
       </section>
