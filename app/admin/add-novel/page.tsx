@@ -23,12 +23,18 @@ export default function AddNovelPage() {
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setCoverFile(e.target.files[0])
+    const file = e.target.files?.[0]
+    if (file) {
+      // 限制封面大小不超过 2MB
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Please upload an image smaller than 2MB.')
+        e.target.value = ''
+        return
+      }
+      setCoverFile(file)
     }
   }
 
-  // 将文件转为 base64
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -50,7 +56,6 @@ export default function AddNovelPage() {
       let coverFileName = null
       let coverFileType = null
 
-      // 如果选择了封面文件，转为 base64
       if (coverFile) {
         coverBase64 = await fileToBase64(coverFile)
         coverFileName = coverFile.name
@@ -98,9 +103,9 @@ export default function AddNovelPage() {
           <input name="author" placeholder="Author *" value={form.author} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" required />
           <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" rows={3} />
           <div>
-            <label className="block text-sm mb-1 text-foreground/70">Cover Image</label>
+            <label className="block text-sm mb-1 text-foreground/70">Cover Image (max 2MB)</label>
             <input type="file" accept="image/*" onChange={handleFileChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
-            <p className="text-xs text-foreground/50 mt-1">Upload a cover image (optional). If not uploaded, you can leave it blank.</p>
+            <p className="text-xs text-foreground/50 mt-1">Upload a cover image. If not uploaded, a random image will be used.</p>
           </div>
           <input name="coverUrl" placeholder="Or enter cover image URL (optional)" value={form.coverUrl} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
           <input name="tags" placeholder="Tags (comma separated, e.g. romance,fantasy)" value={form.tags} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
@@ -109,7 +114,7 @@ export default function AddNovelPage() {
             <textarea name="content" placeholder="Paste entire book content. Chapters should start with 'Chapter 1', 'Chapter 2', etc." value={form.content} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground font-mono text-sm" rows={20} required />
           </div>
           <div>
-            <label className="block text-sm mb-1 text-foreground/70">Paywall starts after chapter #</label>
+            <label className="block text-sm mb-1 text-foreground/70">Paywall starts after chapter # (free chapters)</label>
             <input name="payAfterChapter" type="number" min="0" value={form.payAfterChapter} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
           </div>
           <button type="submit" disabled={loading} className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:bg-primary/90 disabled:opacity-50">
