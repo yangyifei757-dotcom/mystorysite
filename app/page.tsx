@@ -30,12 +30,12 @@ export default function Home() {
   useEffect(() => {
     if (novels.length === 0) return
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % Math.min(novels.length, 3))
+      setCurrentSlide((prev) => (prev + 1) % Math.min(novels.length, 5))
     }, 5000)
     return () => clearInterval(timer)
   }, [novels])
 
-  const bannerNovels = novels.slice(0, 3)
+  const bannerNovels = novels.slice(0, 5)
 
   return (
     <main className="min-h-screen bg-background pb-20">
@@ -63,45 +63,68 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Banner */}
+      {/* 大封面轮播 Hero Banner */}
       {bannerNovels.length > 0 && (
         <section className="pt-20 pb-8 px-4">
-          <div className="max-w-6xl mx-auto relative overflow-hidden rounded-2xl shadow-card bg-[#FCF7F8]">
-            <div className="flex transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+          <div className="max-w-7xl mx-auto relative overflow-hidden rounded-3xl shadow-card bg-[#FCF7F8]">
+            <div
+              className="flex transition-transform duration-700 ease-in-out"
+              style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+            >
               {bannerNovels.map((novel: any) => (
-                <Link key={novel.id} href={`/novel/${novel.id}`} className="w-full flex-shrink-0 flex flex-col md:flex-row items-center p-6 md:p-10">
-                  <div className="w-32 md:w-40 aspect-[3/4] rounded-xl overflow-hidden shadow-lg mb-4 md:mb-0 md:mr-8 relative">
+                <Link
+                  key={novel.id}
+                  href={`/novel/${novel.id}`}
+                  className="w-full flex-shrink-0 flex flex-col md:flex-row items-stretch"
+                >
+                  {/* 大封面左侧区域 */}
+                  <div className="relative w-full md:w-1/2 lg:w-2/5 aspect-[3/4] md:aspect-auto md:min-h-[480px]">
                     {novel.cover_url ? (
                       <Image
                         src={novel.cover_url}
                         alt={novel.title}
                         fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 128px, 160px"
+                        className="object-cover object-top"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        priority
                       />
                     ) : (
-                      <div className="h-full w-full bg-accent flex items-center justify-center text-3xl text-primary">{novel.title?.charAt(0)}</div>
+                      <div className="h-full w-full bg-accent flex items-center justify-center text-6xl text-primary font-serif">
+                        {novel.title?.charAt(0)}
+                      </div>
                     )}
                   </div>
-                  <div className="flex-1 text-center md:text-left">
-                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full mb-2 inline-block">Recommended</span>
-                    <h2 className="text-2xl md:text-4xl font-serif text-foreground mb-1">{novel.title}</h2>
-                    <p className="text-foreground/60 text-sm mb-3">by {novel.author}</p>
-                    <p className="text-foreground/70 text-sm line-clamp-2 mb-4">{novel.description}</p>
-                    <span className="inline-block bg-primary text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-primary/90 transition">
+
+                  {/* 右侧文字区域 */}
+                  <div className="flex-1 flex flex-col justify-center p-8 md:p-12 lg:p-16">
+                    <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full mb-4 self-start">
+                      Recommended
+                    </span>
+                    <h2 className="text-3xl md:text-5xl lg:text-6xl font-serif text-foreground mb-3 leading-tight">
+                      {novel.title}
+                    </h2>
+                    <p className="text-lg text-foreground/60 mb-2">by {novel.author}</p>
+                    <p className="text-foreground/70 text-base md:text-lg line-clamp-3 mb-6 max-w-xl">
+                      {novel.description}
+                    </p>
+                    <span className="inline-block self-start bg-primary text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-primary/90 transition shadow-md">
                       Start Reading
                     </span>
                   </div>
                 </Link>
               ))}
             </div>
+
+            {/* 轮播指示点 */}
             {bannerNovels.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+              <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
                 {bannerNovels.map((_, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentSlide(idx)}
-                    className={`w-2.5 h-2.5 rounded-full transition ${idx === currentSlide ? 'bg-primary scale-110' : 'bg-primary/30'}`}
+                    className={`w-2.5 h-2.5 rounded-full transition ${
+                      idx === currentSlide ? 'bg-primary scale-110' : 'bg-primary/30'
+                    }`}
                   />
                 ))}
               </div>
@@ -112,18 +135,24 @@ export default function Home() {
 
       {/* 搜索栏 */}
       <div className="max-w-6xl mx-auto px-4 pb-6">
-        <form onSubmit={(e) => {
-          e.preventDefault()
-          const q = (e.target as any).q.value
-          if (q.trim()) window.location.href = `/search?q=${encodeURIComponent(q.trim())}`
-        }} className="flex gap-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const q = (e.target as any).q.value
+            if (q.trim()) window.location.href = `/search?q=${encodeURIComponent(q.trim())}`
+          }}
+          className="flex gap-2"
+        >
           <input
             type="text"
             name="q"
             placeholder="Search novels or authors..."
             className="flex-1 p-3 rounded-xl border border-border bg-white text-foreground text-sm focus:outline-none focus:border-primary"
           />
-          <button type="submit" className="px-5 py-3 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition">
+          <button
+            type="submit"
+            className="px-5 py-3 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition"
+          >
             Search
           </button>
         </form>
@@ -153,10 +182,14 @@ export default function Home() {
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     />
                   ) : (
-                    <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
+                    <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">
+                      {novel.title?.charAt(0)}
+                    </div>
                   )}
                   {novel.tags?.[0] && (
-                    <span className="absolute top-2 left-2 bg-white/90 text-foreground text-[10px] px-1.5 py-0.5 rounded-md shadow z-10">{novel.tags[0]}</span>
+                    <span className="absolute top-2 left-2 bg-white/90 text-foreground text-[10px] px-1.5 py-0.5 rounded-md shadow z-10">
+                      {novel.tags[0]}
+                    </span>
                   )}
                 </div>
                 <div className="mt-2 px-1">
