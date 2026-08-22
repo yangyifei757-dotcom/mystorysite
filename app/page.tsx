@@ -78,10 +78,9 @@ export default function Home() {
       {/* Hero Banner：五部封面轮播 */}
       <section className="pt-20 pb-8 px-4">
         <div className="max-w-6xl mx-auto relative overflow-hidden">
-          <div className="flex items-center justify-center gap-3 md:gap-6 h-[280px] md:h-[380px]">
+          <div className="flex items-center justify-center gap-3 md:gap-6 h-[320px] md:h-[420px]">
             {getBannerItems().map((item, idx) => {
               const { novel, position } = item
-              // position: -2, -1, 0, 1, 2
               const isCenter = position === 0
               const isAdjacent = Math.abs(position) === 1
               const scale = isCenter ? 1.15 : isAdjacent ? 0.95 : 0.8
@@ -104,15 +103,15 @@ export default function Home() {
                     className="rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-300"
                     style={{
                       width: isCenter
-                        ? '180px'
+                        ? '220px'
                         : isAdjacent
-                          ? '150px'
-                          : '120px',
+                          ? '170px'
+                          : '130px',
                       height: isCenter
-                        ? '270px'
+                        ? '330px'
                         : isAdjacent
-                          ? '225px'
-                          : '180px',
+                          ? '255px'
+                          : '195px',
                     }}
                   >
                     {novel.cover_url ? (
@@ -121,7 +120,7 @@ export default function Home() {
                         alt={novel.title}
                         fill
                         className="object-cover object-center"
-                        sizes="(max-width: 768px) 120px, 180px"
+                        sizes="(max-width: 768px) 130px, 220px"
                       />
                     ) : (
                       <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">
