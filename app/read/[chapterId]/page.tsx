@@ -40,7 +40,7 @@ export default function ReadPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [nextOrderNum, setNextOrderNum] = useState<number | null>(null)
   const [freeChapters, setFreeChapters] = useState(3)
-  const [showPaywall, setShowPaywall] = useState(false) // 新增状态
+  const [showPaywall, setShowPaywall] = useState(false)
 
   const loadingMoreRef = useRef(false)
 
@@ -75,8 +75,7 @@ export default function ReadPage() {
         const lastFree = chaptersList.filter((ch: any) => ch.order_num <= free).pop()
         if (lastFree && lastFree.id === chapterId) {
           setIsLastFreeChapter(true)
-          // 如果初始章节就是最后一章免费章节，且用户未订阅，显示付费墙
-          // 但此时 hasSubscription 还没设置，所以稍后处理
+          // 如果当前就是最后免费章节，并且用户未订阅，直接显示付费墙
         }
       }
 
@@ -107,16 +106,15 @@ export default function ReadPage() {
       }
       setHasSubscription(subscribed)
 
-      // 初始判断：如果当前章节是最后免费章且用户未订阅，显示付费墙
-      if (chapterData.order_num === free && !subscribed) {
-        setShowPaywall(true)
-      }
-
       const isFreeChapter = chapterData.order_num <= free
       if (isFreeChapter) {
         setCanRead(true)
         setLoadedChapters([chapterData])
         setNextOrderNum(chapterData.order_num + 1)
+        // 如果当前是最后免费章节且未订阅，显示付费墙
+        if (chapterData.order_num === free && !subscribed) {
+          setShowPaywall(true)
+        }
       } else {
         if (!user) {
           router.push('/pricing?message=Please login to read')
@@ -152,7 +150,8 @@ export default function ReadPage() {
     if (!next) return
 
     // 如果下一章是付费章节且未订阅，显示付费墙并停止加载
-    if (next.is_locked && !hasSubscription) {
+    const isFreeNext = next.order_num <= freeChapters
+    if (!isFreeNext && !hasSubscription) {
       setShowPaywall(true)
       return
     }
@@ -195,7 +194,7 @@ export default function ReadPage() {
     }
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [nextOrderNum, hasSubscription, allChapters, loadingMore, currentUser, novel, showPaywall])
+  }, [nextOrderNum, hasSubscription, allChapters, loadingMore, currentUser, novel, showPaywall, freeChapters])
 
   const goToChapter = async (orderNum: number) => {
     if (!novel?.id) return
@@ -213,8 +212,8 @@ export default function ReadPage() {
   }
 
   const canAccessChapter = (ch: any) => {
-    if (!ch.is_locked) return true
-    return hasSubscription
+    const isFree = ch.order_num <= freeChapters
+    return isFree || hasSubscription
   }
 
   if (loading) {
@@ -260,7 +259,7 @@ export default function ReadPage() {
         </div>
       </div>
 
-      {/* 章节内容：循环渲染已加载的章节 */}
+      {/* 章节内容 */}
       <article className="max-w-2xl mx-auto px-4 pt-16 pb-32 font-serif" style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}>
         {loadedChapters.map((ch: any, index: number) => (
           <div key={ch.id} className={index > 0 ? 'mt-16 border-t border-border/30 pt-8' : ''}>
@@ -277,7 +276,7 @@ export default function ReadPage() {
           <div className="mt-8 text-center text-foreground/40 text-sm">Loading next chapter...</div>
         )}
 
-        {/* 付费墙卡片：当 showPaywall 为 true 且未订阅时显示 */}
+        {/* 付费墙 */}
         {showPaywall && !hasSubscription && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
@@ -310,7 +309,7 @@ export default function ReadPage() {
             const maxOrder = Math.max(...allChapters.map((ch: any) => ch.order_num))
             if (currentLastOrder < maxOrder) {
               const next = allChapters.find((ch: any) => ch.order_num === currentLastOrder + 1)
-              if (next && next.is_locked && !hasSubscription) {
+              if (next && next.order_num > freeChapters && !hasSubscription) {
                 router.push('/pricing')
               } else {
                 goToChapter(currentLastOrder + 1)
@@ -334,7 +333,7 @@ export default function ReadPage() {
             </div>
             <div className="space-y-2">
               {allChapters.map((ch: any) => {
-                const isFree = !ch.is_locked
+                const isFree = ch.order_num <= freeChapters
                 const isCurrent = ch.id === chapterId
                 const canAccess = canAccessChapter(ch)
                 return (
