@@ -30,7 +30,6 @@ export async function POST(request: Request) {
 
     let finalCoverUrl = coverUrl || ''
 
-    // 处理封面上传（如果有 base64）
     if (coverBase64 && coverFileName) {
       const base64Data = coverBase64.split(',')[1]
       const buffer = Buffer.from(base64Data, 'base64')
@@ -54,7 +53,7 @@ export async function POST(request: Request) {
       finalCoverUrl = urlData.publicUrl
     }
 
-    // 插入小说，并设置 free_chapters
+    // 重要：插入小说时写入 free_chapters
     const { data: novel, error: novelError } = await supabaseAdmin
       .from('novels')
       .insert({
@@ -64,7 +63,7 @@ export async function POST(request: Request) {
         cover_url: finalCoverUrl,
         tags: tags ? tags.split(',').map((t: string) => t.trim()) : [],
         status: 'published',
-        free_chapters: payAfterChapter || 3, // 关键：同步写入免费章节数
+        free_chapters: payAfterChapter || 3,
       })
       .select('id')
       .single()
@@ -73,7 +72,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to insert novel: ' + (novelError?.message || 'No data') }, { status: 500 })
     }
 
-    // 拆分章节
     const chapters = splitChapters(content)
     if (chapters.length === 0) {
       return NextResponse.json({ error: 'No chapters found. Make sure content contains "Chapter 1", "Chapter 2", etc.' }, { status: 400 })
