@@ -4,14 +4,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 
-const ADMIN_PASSWORD = 'mynovel2026' // 与 API 密码一致
+const ADMIN_PASSWORD = 'mynovel2026'
 
 export default function AdminNovelsPage() {
   const [authorized, setAuthorized] = useState(false)
   const [passwordInput, setPasswordInput] = useState('')
   const [novels, setNovels] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingNovel, setEditingNovel] = useState<any>(null)
   const [editForm, setEditForm] = useState<any>({
     title: '',
     author: '',
@@ -44,7 +44,7 @@ export default function AdminNovelsPage() {
   }
 
   const startEdit = (novel: any) => {
-    setEditingId(novel.id)
+    setEditingNovel(novel)
     setEditForm({
       title: novel.title || '',
       author: novel.author || '',
@@ -58,16 +58,17 @@ export default function AdminNovelsPage() {
   }
 
   const cancelEdit = () => {
-    setEditingId(null)
+    setEditingNovel(null)
   }
 
-  const saveEdit = async (id: string) => {
+  const saveEdit = async () => {
+    if (!editingNovel) return
     setMessage('Saving...')
     const res = await fetch('/api/update-novel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        id,
+        id: editingNovel.id,
         password: ADMIN_PASSWORD,
         title: editForm.title,
         author: editForm.author,
@@ -81,7 +82,7 @@ export default function AdminNovelsPage() {
     const data = await res.json()
     if (res.ok) {
       setMessage('✅ Updated successfully')
-      setEditingId(null)
+      setEditingNovel(null)
       await fetchNovels()
     } else {
       setMessage('❌ ' + (data.error || 'Update failed'))
@@ -132,6 +133,80 @@ export default function AdminNovelsPage() {
 
         {message && <p className="mb-4 text-sm text-primary">{message}</p>}
 
+        {editingNovel && (
+          <div className="mb-8 bg-card rounded-2xl border border-primary/30 p-6 shadow-lg">
+            <h2 className="text-xl font-serif text-primary mb-4">Editing: {editingNovel.title}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-foreground/60 mb-1">Title</label>
+                <input
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  className="w-full p-2 rounded bg-background border border-border text-foreground"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-foreground/60 mb-1">Author</label>
+                <input
+                  value={editForm.author}
+                  onChange={(e) => setEditForm({ ...editForm, author: e.target.value })}
+                  className="w-full p-2 rounded bg-background border border-border text-foreground"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-foreground/60 mb-1">Description</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full p-2 rounded bg-background border border-border text-foreground"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-foreground/60 mb-1">Cover URL</label>
+                <input
+                  value={editForm.cover_url}
+                  onChange={(e) => setEditForm({ ...editForm, cover_url: e.target.value })}
+                  className="w-full p-2 rounded bg-background border border-border text-foreground"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-foreground/60 mb-1">Tags (comma separated)</label>
+                <input
+                  value={editForm.tags}
+                  onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                  className="w-full p-2 rounded bg-background border border-border text-foreground"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-foreground/60 mb-1">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="w-full p-2 rounded bg-background border border-border text-foreground"
+                >
+                  <option value="published">Published</option>
+                  <option value="draft">Draft (Hidden)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-foreground/60 mb-1">Free Chapters</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editForm.free_chapters}
+                  onChange={(e) => setEditForm({ ...editForm, free_chapters: e.target.value })}
+                  className="w-full p-2 rounded bg-background border border-border text-foreground"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button onClick={saveEdit} className="px-5 py-2 bg-primary text-background rounded-full text-sm hover:bg-primary/90 transition">Save Changes</button>
+              <button onClick={cancelEdit} className="px-5 py-2 border border-primary/30 text-primary rounded-full text-sm hover:bg-primary/5 transition">Cancel</button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <p className="text-foreground/50">Loading...</p>
         ) : novels.length === 0 ? (
@@ -162,46 +237,16 @@ export default function AdminNovelsPage() {
                     <td className="p-3 font-medium">{novel.title}</td>
                     <td className="p-3 text-foreground/60">{novel.author}</td>
                     <td className="p-3">
-                      {editingId === novel.id ? (
-                        <select
-                          value={editForm.status}
-                          onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                          className="bg-background border border-border rounded p-1 text-sm"
-                        >
-                          <option value="published">Published</option>
-                          <option value="draft">Draft (Hidden)</option>
-                        </select>
-                      ) : (
-                        <span className={`px-2 py-1 text-xs rounded-full ${novel.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                          {novel.status}
-                        </span>
-                      )}
+                      <span className={`px-2 py-1 text-xs rounded-full ${novel.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {novel.status}
+                      </span>
                     </td>
+                    <td className="p-3">{novel.free_chapters || 3}</td>
                     <td className="p-3">
-                      {editingId === novel.id ? (
-                        <input
-                          type="number"
-                          min="0"
-                          value={editForm.free_chapters}
-                          onChange={(e) => setEditForm({ ...editForm, free_chapters: e.target.value })}
-                          className="w-20 bg-background border border-border rounded p-1 text-sm"
-                        />
-                      ) : (
-                        novel.free_chapters || 3
-                      )}
-                    </td>
-                    <td className="p-3">
-                      {editingId === novel.id ? (
-                        <div className="flex gap-2">
-                          <button onClick={() => saveEdit(novel.id)} className="text-xs bg-primary text-white px-3 py-1 rounded-full hover:bg-primary/90 transition">Save</button>
-                          <button onClick={cancelEdit} className="text-xs border border-primary/30 text-primary px-3 py-1 rounded-full hover:bg-primary/5 transition">Cancel</button>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <button onClick={() => startEdit(novel)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition">Edit</button>
-                          <button onClick={() => deleteNovel(novel.id, novel.title)} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full hover:bg-red-200 transition">Delete</button>
-                        </div>
-                      )}
+                      <div className="flex gap-2">
+                        <button onClick={() => startEdit(novel)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition">Edit</button>
+                        <button onClick={() => deleteNovel(novel.id, novel.title)} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full hover:bg-red-200 transition">Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
