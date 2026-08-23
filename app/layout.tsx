@@ -25,18 +25,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="IvyNovel" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" href="/favicon.ico" />
       </head>
       <body className={`${inter.variable} ${playfair.variable} font-sans bg-background text-foreground antialiased`}>
         {children}
         <Analytics />
-        {/* 注册 Service Worker */}
+        {/* 注册 Service Worker，updateViaCache: 'none' 确保每次获取最新 sw.js */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js');
+                  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
                 });
               }
             `,
