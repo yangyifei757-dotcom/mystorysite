@@ -62,7 +62,7 @@ export default function Home() {
                 className="h-12 w-auto"
                 priority
               />
-              <span className="text-2xl font-serif font-bold text-primary tracking-wide">
+              <span className="text-2xl font-['Jost'] font-black text-primary tracking-wide">
                 IvyNovel
               </span>
             </Link>
@@ -165,7 +165,7 @@ export default function Home() {
       {/* Recommend 区域 */}
       <section className="max-w-6xl mx-auto px-4 pb-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl md:text-3xl font-serif text-foreground">Recommend</h2>
+          <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">Recommend</h2>
         </div>
 
         {novels.length === 0 ? (
@@ -202,7 +202,7 @@ export default function Home() {
 
                   {/* 右侧信息 */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-sans font-black text-xl md:text-2xl tracking-tight text-foreground leading-tight mb-1">
+                    <h3 className="font-['Jost'] font-black text-lg md:text-xl tracking-tight text-foreground leading-tight mb-1">
                       {novel.title}
                     </h3>
                     <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
