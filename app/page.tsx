@@ -200,17 +200,21 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* 右侧信息区，优化对齐 */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h3 className="font-['Jost'] font-black text-lg md:text-xl leading-tight text-foreground mb-1">
-                      {novel.title}
-                    </h3>
-                    <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
-                    {tag && (
-                      <span className="inline-block self-start text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mb-2">
-                        {tag}
-                      </span>
-                    )}
+                  {/* 右侧信息区：固定高度，灵活排列，底部对齐 */}
+                  <div className="flex-1 min-w-0 flex flex-col h-full justify-between">
+                    <div>
+                      {/* 书名区域固定两行高度 */}
+                      <h3 className="font-['Jost'] font-black text-lg md:text-xl leading-tight text-foreground mb-1 line-clamp-2 min-h-[2.5rem] md:min-h-[3rem]">
+                        {novel.title}
+                      </h3>
+                      <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
+                      {tag && (
+                        <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mb-2">
+                          {tag}
+                        </span>
+                      )}
+                    </div>
+                    {/* 简介固定在底部，两行截断 */}
                     <p className="text-sm text-foreground/60 line-clamp-2">
                       {novel.description}
                     </p>
