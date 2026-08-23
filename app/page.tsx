@@ -181,17 +181,17 @@ export default function Home() {
                 <Link
                   key={novel.id}
                   href={`/novel/${novel.id}`}
-                  className="group flex gap-4 p-3 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
+                  className="group flex gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
                 >
-                  {/* 左侧封面，尺寸加大 */}
-                  <div className="relative w-28 h-36 md:w-32 md:h-44 flex-shrink-0 rounded-lg overflow-hidden">
+                  {/* 左侧封面 */}
+                  <div className="relative w-24 h-32 md:w-28 md:h-40 flex-shrink-0 rounded-lg overflow-hidden">
                     {novel.cover_url ? (
                       <Image
                         src={novel.cover_url}
                         alt={novel.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        sizes="(max-width: 640px) 112px, 128px"
+                        sizes="(max-width: 640px) 96px, 112px"
                       />
                     ) : (
                       <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">
@@ -200,14 +200,14 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* 右侧信息 */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-['Jost'] font-black text-lg md:text-xl tracking-tight text-foreground leading-tight mb-1">
+                  {/* 右侧信息区，优化对齐 */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <h3 className="font-['Jost'] font-black text-lg md:text-xl leading-tight text-foreground mb-1">
                       {novel.title}
                     </h3>
                     <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
                     {tag && (
-                      <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mb-2">
+                      <span className="inline-block self-start text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mb-2">
                         {tag}
                       </span>
                     )}
