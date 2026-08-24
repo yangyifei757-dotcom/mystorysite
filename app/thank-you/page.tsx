@@ -1,6 +1,14 @@
+'use client'
+
+import { useEffect } from 'react'
 import Link from 'next/link'
+import { track } from '@vercel/analytics'
 
 export default function ThankYouPage() {
+  useEffect(() => {
+    track('payment_success')
+  }, [])
+
   return (
     <main className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="max-w-md text-center space-y-6">
