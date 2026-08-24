@@ -22,6 +22,7 @@ export default function NovelPage() {
   const [chapters, setChapters] = useState<any[]>([])
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [showFullSynopsis, setShowFullSynopsis] = useState(false) // 新增
 
   useEffect(() => {
     let isMounted = true
@@ -132,7 +133,7 @@ export default function NovelPage() {
             </div>
           </div>
 
-          {/* 右侧：书名、作者、Tag，以及新增的 Read 按钮 */}
+          {/* 右侧：书名、作者、Tag，以及 Read 按钮 */}
           <div className="flex-1 flex flex-col justify-start md:justify-start md:pt-2">
             <h1 className="text-3xl md:text-4xl font-['Jost'] font-black text-foreground leading-tight mb-3">
               {novel.title}
@@ -144,7 +145,7 @@ export default function NovelPage() {
               </span>
             )}
 
-            {/* Read 按钮，位于右侧信息区底部 */}
+            {/* Read 按钮 */}
             <div className="mt-6">
               {canReadFirst && firstChapter ? (
                 <Link
@@ -165,12 +166,20 @@ export default function NovelPage() {
           </div>
         </div>
 
-        {/* 简介（Synopsis） */}
+        {/* Synopsis 区域，可折叠 */}
         <div className="mb-8">
           <h2 className="text-xl font-['Jost'] font-black text-foreground mb-2">Synopsis</h2>
-          <p className="text-foreground/70 leading-relaxed">
+          <p className={`text-foreground/70 leading-relaxed ${!showFullSynopsis ? 'line-clamp-3' : ''}`}>
             {novel.description || "No synopsis available."}
           </p>
+          {novel.description && novel.description.length > 0 && (
+            <button
+              onClick={() => setShowFullSynopsis(!showFullSynopsis)}
+              className="text-primary text-sm mt-2 hover:underline"
+            >
+              {showFullSynopsis ? 'Show Less' : 'More'}
+            </button>
+          )}
         </div>
 
         {/* 第一章内容预览 */}
