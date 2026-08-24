@@ -4,12 +4,14 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabaseClient'
 import { useEffect, useState } from 'react'
+import { track } from '@vercel/analytics'
 
 export default function Home() {
   const [novels, setNovels] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [continueReading, setContinueReading] = useState<any>(null) // 新增
 
   useEffect(() => {
     const fetchData = async () => {
@@ -22,6 +24,33 @@ export default function Home() {
 
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+
+      if (user) {
+        // 获取最近阅读进度（去重，只取每部小说最近一条）
+        const { data: progress } = await supabase
+          .from('reading_progress')
+          .select('*, chapter:chapter_id(*, novel:novel_id(*))')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+
+        if (progress && progress.length > 0) {
+          // 去重：每本小说只保留最新一条
+          const seenNovels = new Set()
+          const uniqueProgress = progress.filter((item: any) => {
+            const novelId = item.chapter?.novel?.id
+            if (novelId && !seenNovels.has(novelId)) {
+              seenNovels.add(novelId)
+              return true
+            }
+            return false
+          })
+          // 只取最近一本
+          if (uniqueProgress.length > 0) {
+            setContinueReading(uniqueProgress[0])
+          }
+        }
+      }
+
       setLoading(false)
     }
     fetchData()
@@ -96,6 +125,7 @@ export default function Home() {
                     opacity,
                     transform: `scale(${scale}) translateY(${translateY}px)`,
                   }}
+                  onClick={() => track('click_banner_novel', { novel_id: novel.id })}
                 >
                   <div
                     className="rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-300"
@@ -123,7 +153,6 @@ export default function Home() {
             })}
           </div>
 
-          {/* 轮播指示点 */}
           {bannerNovels.length > 1 && (
             <div className="flex justify-center gap-2 mt-4">
               {bannerNovels.map((_, idx) => (
@@ -139,6 +168,43 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {/* Continue Reading 卡片（登录后显示） */}
+      {continueReading && continueReading.chapter && (
+        <section className="max-w-6xl mx-auto px-4 pb-6">
+          <Link
+            href={`/read/${continueReading.chapter_id}`}
+            className="flex items-center gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all"
+            onClick={() => track('click_continue_reading_home', { novel_id: continueReading.chapter.novel_id })}
+          >
+            <div className="relative w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden">
+              {continueReading.chapter.novel?.cover_url ? (
+                <Image
+                  src={continueReading.chapter.novel.cover_url}
+                  alt={continueReading.chapter.novel.title}
+                  fill
+                  className="object-cover"
+                  sizes="64px"
+                />
+              ) : (
+                <div className="h-full w-full bg-accent flex items-center justify-center text-xl text-primary font-serif">
+                  {continueReading.chapter.novel?.title?.charAt(0)}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-primary font-medium mb-1">Continue Reading</p>
+              <h3 className="font-['Jost'] font-black text-lg text-foreground line-clamp-1">
+                {continueReading.chapter.novel?.title}
+              </h3>
+              <p className="text-xs text-foreground/50">{continueReading.chapter.title}</p>
+            </div>
+            <span className="text-sm bg-primary text-white px-4 py-2 rounded-full whitespace-nowrap">
+              Read Now
+            </span>
+          </Link>
+        </section>
+      )}
 
       {/* 搜索栏 */}
       <div className="max-w-6xl mx-auto px-4 pb-6">
@@ -182,8 +248,8 @@ export default function Home() {
                   key={novel.id}
                   href={`/novel/${novel.id}`}
                   className="group flex gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
+                  onClick={() => track('click_recommend_novel', { novel_id: novel.id })}
                 >
-                  {/* 左侧封面 */}
                   <div className="relative w-24 h-32 md:w-28 md:h-40 flex-shrink-0 rounded-lg overflow-hidden">
                     {novel.cover_url ? (
                       <Image
@@ -200,10 +266,8 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* 右侧信息区：固定高度，灵活排列，底部对齐 */}
                   <div className="flex-1 min-w-0 flex flex-col h-full justify-between">
                     <div>
-                      {/* 书名区域固定两行高度 */}
                       <h3 className="font-['Jost'] font-black text-lg md:text-xl leading-tight text-foreground mb-1 line-clamp-2 min-h-[2.5rem] md:min-h-[3rem]">
                         {novel.title}
                       </h3>
@@ -214,7 +278,6 @@ export default function Home() {
                         </span>
                       )}
                     </div>
-                    {/* 简介固定在底部，两行截断 */}
                     <p className="text-sm text-foreground/60 line-clamp-2">
                       {novel.description}
                     </p>
@@ -225,6 +288,45 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* New Releases 区域（横向滚动） */}
+      {novels.length > 4 && (
+        <section className="max-w-6xl mx-auto px-4 pb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">New Releases</h2>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {novels.slice(0, 4).map((novel: any) => (
+              <Link
+                key={novel.id}
+                href={`/novel/${novel.id}`}
+                className="flex-shrink-0 w-32 md:w-40 group"
+                onClick={() => track('click_new_release', { novel_id: novel.id })}
+              >
+                <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300">
+                  {novel.cover_url ? (
+                    <Image
+                      src={novel.cover_url}
+                      alt={novel.title}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      sizes="(max-width: 768px) 128px, 160px"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-accent flex items-center justify-center text-3xl text-primary font-serif">
+                      {novel.title?.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <h3 className="font-['Jost'] font-bold text-sm text-foreground line-clamp-1">{novel.title}</h3>
+                  <p className="text-xs text-foreground/50">{novel.author}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Footer 法律链接 */}
       <div className="max-w-6xl mx-auto px-4 pb-6 flex justify-center gap-6 text-xs text-foreground/40">
