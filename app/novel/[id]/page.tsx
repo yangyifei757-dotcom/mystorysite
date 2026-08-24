@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
+import { track } from '@vercel/analytics'
 
 function formatChapterTitle(orderNum: number, title: string | null | undefined) {
   const defaultTitle = `Chapter ${orderNum}`
@@ -22,7 +23,7 @@ export default function NovelPage() {
   const [chapters, setChapters] = useState<any[]>([])
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [showFullSynopsis, setShowFullSynopsis] = useState(false) // 新增
+  const [showFullSynopsis, setShowFullSynopsis] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -38,7 +39,11 @@ export default function NovelPage() {
       if (!isMounted) return
       setNovel(novelData)
       setChapters(chaptersData || [])
-      if (novelData) document.title = `${novelData.title} - IvyNovel`
+      if (novelData) {
+        document.title = `${novelData.title} - IvyNovel`
+        // 埋点：进入详情页
+        track('view_novel_detail', { novel_id: id, title: novelData.title })
+      }
 
       // 获取推荐小说
       if (novelData) {
@@ -151,6 +156,7 @@ export default function NovelPage() {
                 <Link
                   href={`/read/${firstChapter.id}`}
                   className="inline-block bg-primary text-white px-10 py-3 rounded-full text-lg font-bold hover:bg-primary/90 transition shadow-lg"
+                  onClick={() => track('click_read_first_chapter', { novel_id: id })}
                 >
                   Read
                 </Link>
@@ -158,6 +164,7 @@ export default function NovelPage() {
                 <Link
                   href="/pricing"
                   className="inline-block bg-primary text-white px-10 py-3 rounded-full text-lg font-bold hover:bg-primary/90 transition shadow-lg"
+                  onClick={() => track('click_subscribe_from_detail', { novel_id: id })}
                 >
                   Subscribe to Read
                 </Link>
@@ -199,6 +206,7 @@ export default function NovelPage() {
                 <Link
                   href={`/read/${nextChapter.id}`}
                   className="inline-block bg-primary text-white px-10 py-4 rounded-xl text-lg font-bold hover:bg-primary/90 transition shadow-lg"
+                  onClick={() => track('click_continue_reading', { novel_id: id, next_chapter_id: nextChapter.id })}
                 >
                   Continue Reading
                 </Link>
@@ -209,7 +217,11 @@ export default function NovelPage() {
           <div className="mb-8 p-6 bg-card rounded-xl border border-border text-center">
             <p className="text-foreground/50 mb-4">This chapter is locked. Subscribe to read the full story.</p>
             {firstChapter && (
-              <Link href={`/read/${firstChapter.id}`} className="inline-block bg-primary text-white px-6 py-3 rounded-full font-medium hover:bg-primary/90 transition">
+              <Link
+                href={`/read/${firstChapter.id}`}
+                className="inline-block bg-primary text-white px-6 py-3 rounded-full font-medium hover:bg-primary/90 transition"
+                onClick={() => track('click_subscribe_from_detail', { novel_id: id })}
+              >
                 Start Reading
               </Link>
             )}
@@ -222,7 +234,12 @@ export default function NovelPage() {
             <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground mb-6">You May Also Like</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
               {recommendations.map((rec: any) => (
-                <Link key={rec.id} href={`/novel/${rec.id}`} className="group flex flex-col">
+                <Link
+                  key={rec.id}
+                  href={`/novel/${rec.id}`}
+                  className="group flex flex-col"
+                  onClick={() => track('click_recommendation', { novel_id: rec.id, source: 'detail_page' })}
+                >
                   <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300">
                     {rec.cover_url ? (
                       <Image src={rec.cover_url} alt={rec.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
