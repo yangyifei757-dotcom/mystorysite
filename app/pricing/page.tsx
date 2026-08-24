@@ -7,25 +7,47 @@ import { track } from '@vercel/analytics'
 
 export default function PricingPage() {
   const [user, setUser] = useState<any>(null)
+  const [hasSubscription, setHasSubscription] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user || null)
+      const currentUser = session?.user || null
+      setUser(currentUser)
+
+      // 检查订阅状态
+      if (currentUser) {
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('status, current_period_end')
+          .eq('user_id', currentUser.id)
+          .order('current_period_end', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
+          setHasSubscription(true)
+        }
+      }
     }
     checkUser()
-    // 埋点：定价页浏览
     track('view_pricing')
   }, [])
 
   const handleSubscribe = (paymentLink: string, planName: string) => {
-    // 埋点：点击订阅套餐
     track('click_subscribe_plan', { plan: planName })
+
+    if (hasSubscription) {
+      alert('You already have an active subscription. Manage your subscription in your account page.')
+      return
+    }
+
     if (!user) {
       router.push('/login?redirect=/pricing')
       return
     }
+
     window.open(paymentLink, '_blank')
   }
 
