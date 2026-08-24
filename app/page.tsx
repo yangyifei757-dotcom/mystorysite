@@ -6,12 +6,35 @@ import { supabase } from '@/lib/supabaseClient'
 import { useEffect, useState } from 'react'
 import { track } from '@vercel/analytics'
 
+// 基于种子的伪随机函数
+function mulberry32(seed: number) {
+  return function() {
+    let t = (seed += 0x6D2B79F5)
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// 获取三天周期种子
+function getThreeDaySeed() {
+  const now = new Date()
+  const dayIndex = Math.floor(now.getTime() / (3 * 24 * 60 * 60 * 1000))
+  return dayIndex
+}
+
 export default function Home() {
   const [novels, setNovels] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [continueReading, setContinueReading] = useState<any>(null) // 新增
+  const [continueReading, setContinueReading] = useState<any>(null)
+
+  // 各区块数据
+  const [hotNovels, setHotNovels] = useState<any[]>([])
+  const [recommendNovels, setRecommendNovels] = useState<any[]>([])
+  const [risingNovels, setRisingNovels] = useState<any[]>([])
+  const [newReleaseNovels, setNewReleaseNovels] = useState<any[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -26,7 +49,6 @@ export default function Home() {
       setUser(user)
 
       if (user) {
-        // 获取最近阅读进度（去重，只取每部小说最近一条）
         const { data: progress } = await supabase
           .from('reading_progress')
           .select('*, chapter:chapter_id(*, novel:novel_id(*))')
@@ -34,7 +56,6 @@ export default function Home() {
           .order('updated_at', { ascending: false })
 
         if (progress && progress.length > 0) {
-          // 去重：每本小说只保留最新一条
           const seenNovels = new Set()
           const uniqueProgress = progress.filter((item: any) => {
             const novelId = item.chapter?.novel?.id
@@ -44,7 +65,6 @@ export default function Home() {
             }
             return false
           })
-          // 只取最近一本
           if (uniqueProgress.length > 0) {
             setContinueReading(uniqueProgress[0])
           }
@@ -57,6 +77,31 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
+    if (novels.length === 0) return
+
+    // 随机打乱
+    const random = mulberry32(getThreeDaySeed())
+    const shuffled = [...novels].sort(() => random() - 0.5)
+
+    // Hot 区域：取前三部，中间为第1部
+    const hot = shuffled.slice(0, 3)
+    setHotNovels(hot)
+
+    // Recommend：从剩余中取6部
+    const recommend = shuffled.slice(3, 9)
+    setRecommendNovels(recommend)
+
+    // Rising：再取6部
+    const rising = shuffled.slice(9, 15)
+    setRisingNovels(rising)
+
+    // New Releases：再取6部
+    const newRelease = shuffled.slice(15, 21)
+    setNewReleaseNovels(newRelease)
+
+  }, [novels])
+
+  useEffect(() => {
     if (novels.length < 3) return
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % novels.length)
@@ -65,7 +110,6 @@ export default function Home() {
   }, [novels])
 
   const bannerNovels = novels.slice(0, 5)
-
   const getBannerItems = () => {
     if (bannerNovels.length < 3) return bannerNovels
     const items = []
@@ -74,6 +118,52 @@ export default function Home() {
       items.push({ novel: bannerNovels[index], position: i })
     }
     return items
+  }
+
+  // 通用渲染卡片（用于 Recommend、Rising、New Releases）
+  const renderNovelCard = (novel: any) => {
+    const tag = Array.isArray(novel.tags) ? novel.tags[0] : novel.tags
+    return (
+      <Link
+        key={novel.id}
+        href={`/novel/${novel.id}`}
+        className="group flex gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
+        onClick={() => track('click_recommend_novel', { novel_id: novel.id })}
+      >
+        <div className="relative w-24 h-32 md:w-28 md:h-40 flex-shrink-0 rounded-lg overflow-hidden">
+          {novel.cover_url ? (
+            <Image
+              src={novel.cover_url}
+              alt={novel.title}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 640px) 96px, 112px"
+            />
+          ) : (
+            <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">
+              {novel.title?.charAt(0)}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 flex flex-col h-full justify-between">
+          <div>
+            <h3 className="font-['Jost'] font-black text-lg md:text-xl leading-tight text-foreground mb-1 line-clamp-2 min-h-[2.5rem] md:min-h-[3rem]">
+              {novel.title}
+            </h3>
+            <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
+            {tag && (
+              <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mb-2">
+                {tag}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-foreground/60 line-clamp-2">
+            {novel.description}
+          </p>
+        </div>
+      </Link>
+    )
   }
 
   return (
@@ -102,7 +192,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Banner：五部封面轮播 */}
+      {/* Hero Banner */}
       <section className="pt-20 pb-8 px-4">
         <div className="max-w-6xl mx-auto relative overflow-hidden">
           <div className="flex items-center justify-center gap-3 md:gap-6 h-[320px] md:h-[420px]">
@@ -169,7 +259,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Continue Reading 卡片（登录后显示） */}
+      {/* Continue Reading */}
       {continueReading && continueReading.chapter && (
         <section className="max-w-6xl mx-auto px-4 pb-6">
           <Link
@@ -228,105 +318,98 @@ export default function Home() {
         </form>
       </div>
 
-      {/* Recommend 区域 */}
-      <section className="max-w-6xl mx-auto px-4 pb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">Recommend</h2>
-        </div>
-
-        {novels.length === 0 ? (
-          <div className="text-center py-20 text-foreground/40 bg-card rounded-2xl shadow-card">
-            <p className="text-lg">✨ Our stories are brewing...</p>
-            <p className="text-sm mt-2">Check back soon for handpicked romantic tales.</p>
+      {/* Hot 区域：三部作品，中间大封面，标注1,2,3 */}
+      {hotNovels.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 pb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">Hot</h2>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {novels.map((novel: any) => {
-              const tag = Array.isArray(novel.tags) ? novel.tags[0] : novel.tags
+          <div className="flex items-center justify-center gap-4 md:gap-8">
+            {hotNovels.map((novel, idx) => {
+              const position = idx + 1 // 1,2,3
+              const isCenter = position === 1
               return (
                 <Link
                   key={novel.id}
                   href={`/novel/${novel.id}`}
-                  className="group flex gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
-                  onClick={() => track('click_recommend_novel', { novel_id: novel.id })}
+                  className="relative flex-shrink-0"
+                  onClick={() => track('click_hot_novel', { novel_id: novel.id, rank: position })}
                 >
-                  <div className="relative w-24 h-32 md:w-28 md:h-40 flex-shrink-0 rounded-lg overflow-hidden">
+                  <div
+                    className={`rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 ${
+                      isCenter ? 'w-36 h-52 md:w-48 md:h-72' : 'w-24 h-36 md:w-32 md:h-48'
+                    }`}
+                  >
                     {novel.cover_url ? (
                       <Image
                         src={novel.cover_url}
                         alt={novel.title}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        sizes="(max-width: 640px) 96px, 112px"
+                        className="object-cover"
+                        sizes={isCenter ? '(max-width: 768px) 144px, 192px' : '(max-width: 768px) 96px, 128px'}
                       />
                     ) : (
-                      <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">
+                      <div className="h-full w-full bg-accent flex items-center justify-center text-3xl text-primary font-serif">
                         {novel.title?.charAt(0)}
                       </div>
                     )}
                   </div>
-
-                  <div className="flex-1 min-w-0 flex flex-col h-full justify-between">
-                    <div>
-                      <h3 className="font-['Jost'] font-black text-lg md:text-xl leading-tight text-foreground mb-1 line-clamp-2 min-h-[2.5rem] md:min-h-[3rem]">
-                        {novel.title}
-                      </h3>
-                      <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
-                      {tag && (
-                        <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mb-2">
-                          {tag}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-foreground/60 line-clamp-2">
-                      {novel.description}
-                    </p>
-                  </div>
+                  {/* 排名角标 */}
+                  <span
+                    className={`absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
+                      isCenter ? 'bg-primary' : 'bg-gray-500'
+                    }`}
+                  >
+                    {position}
+                  </span>
                 </Link>
               )
             })}
           </div>
+        </section>
+      )}
+
+      {/* Recommend 区域 */}
+      <section className="max-w-6xl mx-auto px-4 pb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">Recommend</h2>
+        </div>
+        {recommendNovels.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {recommendNovels.map((novel: any) => renderNovelCard(novel))}
+          </div>
+        ) : (
+          <p className="text-foreground/40 text-center py-10">No recommendations yet.</p>
         )}
       </section>
 
-      {/* New Releases 区域（横向滚动） */}
-      {novels.length > 4 && (
-        <section className="max-w-6xl mx-auto px-4 pb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">New Releases</h2>
+      {/* Rising 区域 */}
+      <section className="max-w-6xl mx-auto px-4 pb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">Rising</h2>
+        </div>
+        {risingNovels.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {risingNovels.map((novel: any) => renderNovelCard(novel))}
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {novels.slice(0, 4).map((novel: any) => (
-              <Link
-                key={novel.id}
-                href={`/novel/${novel.id}`}
-                className="flex-shrink-0 w-32 md:w-40 group"
-                onClick={() => track('click_new_release', { novel_id: novel.id })}
-              >
-                <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300">
-                  {novel.cover_url ? (
-                    <Image
-                      src={novel.cover_url}
-                      alt={novel.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      sizes="(max-width: 768px) 128px, 160px"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-accent flex items-center justify-center text-3xl text-primary font-serif">
-                      {novel.title?.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                <div className="mt-2">
-                  <h3 className="font-['Jost'] font-bold text-sm text-foreground line-clamp-1">{novel.title}</h3>
-                  <p className="text-xs text-foreground/50">{novel.author}</p>
-                </div>
-              </Link>
-            ))}
+        ) : (
+          <p className="text-foreground/40 text-center py-10">More stories coming soon.</p>
+        )}
+      </section>
+
+      {/* New Releases 区域 */}
+      <section className="max-w-6xl mx-auto px-4 pb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">New Releases</h2>
+        </div>
+        {newReleaseNovels.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {newReleaseNovels.map((novel: any) => renderNovelCard(novel))}
           </div>
-        </section>
-      )}
+        ) : (
+          <p className="text-foreground/40 text-center py-10">New stories coming soon.</p>
+        )}
+      </section>
 
       {/* Footer 法律链接 */}
       <div className="max-w-6xl mx-auto px-4 pb-6 flex justify-center gap-6 text-xs text-foreground/40">
