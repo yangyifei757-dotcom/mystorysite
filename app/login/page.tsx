@@ -3,13 +3,14 @@
 import { Suspense, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
-// 使用 useSearchParams 的内部组件
 function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [agreeTerms, setAgreeTerms] = useState(false) // 新增
 
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/'
@@ -41,10 +42,14 @@ function LoginForm() {
     setLoading(false)
   }
 
-  // 邮箱注册（自动确认）
+  // 邮箱注册（自动确认 + 必须同意条款）
   const handleSignUp = async () => {
     if (!email || !password) {
       setMessage('Email and password are required.')
+      return
+    }
+    if (!agreeTerms) {
+      setMessage('Please agree to the Terms of Service and Privacy Policy.')
       return
     }
     setLoading(true)
@@ -132,23 +137,41 @@ function LoginForm() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-foreground/50">
-          <a href="/forgot-password" className="text-primary hover:underline">Forgot password?</a>
-        </p>
-
-        <p className="text-center text-sm text-foreground/50">
-          No account?{' '}
-          <button onClick={handleSignUp} className="text-primary hover:underline" disabled={loading}>
+        {/* 注册部分：包含同意条款复选框 */}
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center gap-2">
+            <input
+              type="checkbox"
+              id="agreeTerms"
+              checked={agreeTerms}
+              onChange={(e) => setAgreeTerms(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <label htmlFor="agreeTerms" className="text-sm text-foreground/70">
+              I agree to the{' '}
+              <Link href="/terms-of-service" className="text-primary hover:underline" target="_blank">Terms of Service</Link>{' '}
+              and{' '}
+              <Link href="/privacy-policy" className="text-primary hover:underline" target="_blank">Privacy Policy</Link>
+            </label>
+          </div>
+          <button
+            onClick={handleSignUp}
+            disabled={loading}
+            className="text-primary hover:underline text-sm"
+          >
             Sign up with email
           </button>
-        </p>
+          <p className="text-center text-sm text-foreground/50">
+            <Link href="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
+          </p>
+        </div>
+
         {message && <p className="text-center text-sm text-red-400">{message}</p>}
       </div>
     </main>
   )
 }
 
-// 默认导出的页面组件，用 Suspense 包裹
 export default function LoginPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-foreground/50">Loading...</div>}>
