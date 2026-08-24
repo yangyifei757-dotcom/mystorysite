@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+import { track } from '@vercel/analytics'
 
 const FONT_SIZES = [16, 18, 20, 22, 24]
 const BG_STYLES = {
@@ -44,7 +45,7 @@ export default function ReadPage() {
 
   const loadingMoreRef = useRef(false)
 
-  // 🔒 禁止右键、复制、选择（内容保护）
+  // 防复制/右键
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
     const handleCopy = (e: ClipboardEvent) => e.preventDefault();
@@ -129,10 +130,12 @@ export default function ReadPage() {
         setNextOrderNum(chapterData.order_num + 1)
         if (chapterData.order_num === free && !subscribed) {
           setShowPaywall(true)
+          track('hit_paywall', { novel_id: chapterData.novel.id, chapter_id: chapterId })
         }
       } else {
+        // 付费章节：未登录 -> 跳登录页并带回跳；已登录未订阅 -> 跳定价页
         if (!user) {
-          router.push('/pricing?message=Please login to read')
+          router.push(`/login?redirect=/read/${chapterId}`)
           return
         }
         if (!subscribed) {
@@ -167,6 +170,7 @@ export default function ReadPage() {
     const isFreeNext = next.order_num <= freeChapters
     if (!isFreeNext && !hasSubscription) {
       setShowPaywall(true)
+      track('hit_paywall', { novel_id: novel.id, chapter_id: next.id, source: 'auto_load' })
       return
     }
 
@@ -273,7 +277,7 @@ export default function ReadPage() {
         </div>
       </div>
 
-      {/* 章节内容（不可选择、不可复制） */}
+      {/* 章节内容 */}
       <article
         className="max-w-2xl mx-auto px-4 pt-16 pb-32 font-serif select-none"
         style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}
@@ -305,6 +309,7 @@ export default function ReadPage() {
             <Link
               href="/pricing"
               className="inline-block bg-primary text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-primary/90 transition shadow-md hover:shadow-lg"
+              onClick={() => track('click_subscribe_from_paywall', { novel_id: novel.id, chapter_id: chapterId })}
             >
               Subscribe Now
             </Link>
