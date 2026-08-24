@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabaseClient'
 import { useEffect, useState } from 'react'
 import { track } from '@vercel/analytics'
 
-// 基于种子的伪随机函数
 function mulberry32(seed: number) {
   return function() {
     let t = (seed += 0x6D2B79F5)
@@ -16,11 +15,17 @@ function mulberry32(seed: number) {
   }
 }
 
-// 获取三天周期种子
 function getThreeDaySeed() {
   const now = new Date()
-  const dayIndex = Math.floor(now.getTime() / (3 * 24 * 60 * 60 * 1000))
-  return dayIndex
+  return Math.floor(now.getTime() / (3 * 24 * 60 * 60 * 1000))
+}
+
+function formatChapterTitle(orderNum: number, title: string | null | undefined) {
+  const defaultTitle = `Chapter ${orderNum}`
+  if (!title || title === defaultTitle || title.trim() === `Chapter ${orderNum}`) {
+    return defaultTitle
+  }
+  return `Chapter ${orderNum}: ${title}`
 }
 
 export default function Home() {
@@ -29,8 +34,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [continueReading, setContinueReading] = useState<any>(null)
+  const [showContinueModal, setShowContinueModal] = useState(false)
 
-  // 各区块数据
   const [hotNovels, setHotNovels] = useState<any[]>([])
   const [recommendNovels, setRecommendNovels] = useState<any[]>([])
   const [risingNovels, setRisingNovels] = useState<any[]>([])
@@ -66,7 +71,9 @@ export default function Home() {
             return false
           })
           if (uniqueProgress.length > 0) {
-            setContinueReading(uniqueProgress[0])
+            const latest = uniqueProgress[0]
+            setContinueReading(latest)
+            setShowContinueModal(true)
           }
         }
       }
@@ -79,26 +86,13 @@ export default function Home() {
   useEffect(() => {
     if (novels.length === 0) return
 
-    // 随机打乱
     const random = mulberry32(getThreeDaySeed())
     const shuffled = [...novels].sort(() => random() - 0.5)
 
-    // Hot 区域：取前三部，中间为第1部
-    const hot = shuffled.slice(0, 3)
-    setHotNovels(hot)
-
-    // Recommend：从剩余中取6部
-    const recommend = shuffled.slice(3, 9)
-    setRecommendNovels(recommend)
-
-    // Rising：再取6部
-    const rising = shuffled.slice(9, 15)
-    setRisingNovels(rising)
-
-    // New Releases：再取6部
-    const newRelease = shuffled.slice(15, 21)
-    setNewReleaseNovels(newRelease)
-
+    setHotNovels(shuffled.slice(0, 3))
+    setRecommendNovels(shuffled.slice(3, 9))
+    setRisingNovels(shuffled.slice(9, 15))
+    setNewReleaseNovels(shuffled.slice(15, 21))
   }, [novels])
 
   useEffect(() => {
@@ -120,7 +114,6 @@ export default function Home() {
     return items
   }
 
-  // 通用渲染卡片（用于 Recommend、Rising、New Releases）
   const renderNovelCard = (novel: any) => {
     const tag = Array.isArray(novel.tags) ? novel.tags[0] : novel.tags
     return (
@@ -259,43 +252,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Continue Reading */}
-      {continueReading && continueReading.chapter && (
-        <section className="max-w-6xl mx-auto px-4 pb-6">
-          <Link
-            href={`/read/${continueReading.chapter_id}`}
-            className="flex items-center gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all"
-            onClick={() => track('click_continue_reading_home', { novel_id: continueReading.chapter.novel_id })}
-          >
-            <div className="relative w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden">
-              {continueReading.chapter.novel?.cover_url ? (
-                <Image
-                  src={continueReading.chapter.novel.cover_url}
-                  alt={continueReading.chapter.novel.title}
-                  fill
-                  className="object-cover"
-                  sizes="64px"
-                />
-              ) : (
-                <div className="h-full w-full bg-accent flex items-center justify-center text-xl text-primary font-serif">
-                  {continueReading.chapter.novel?.title?.charAt(0)}
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-primary font-medium mb-1">Continue Reading</p>
-              <h3 className="font-['Jost'] font-black text-lg text-foreground line-clamp-1">
-                {continueReading.chapter.novel?.title}
-              </h3>
-              <p className="text-xs text-foreground/50">{continueReading.chapter.title}</p>
-            </div>
-            <span className="text-sm bg-primary text-white px-4 py-2 rounded-full whitespace-nowrap">
-              Read Now
-            </span>
-          </Link>
-        </section>
-      )}
-
       {/* 搜索栏 */}
       <div className="max-w-6xl mx-auto px-4 pb-6">
         <form
@@ -318,57 +274,6 @@ export default function Home() {
         </form>
       </div>
 
-      {/* Hot 区域：三部作品，中间大封面，标注1,2,3 */}
-      {hotNovels.length > 0 && (
-        <section className="max-w-6xl mx-auto px-4 pb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">Hot</h2>
-          </div>
-          <div className="flex items-center justify-center gap-4 md:gap-8">
-            {hotNovels.map((novel, idx) => {
-              const position = idx + 1 // 1,2,3
-              const isCenter = position === 1
-              return (
-                <Link
-                  key={novel.id}
-                  href={`/novel/${novel.id}`}
-                  className="relative flex-shrink-0"
-                  onClick={() => track('click_hot_novel', { novel_id: novel.id, rank: position })}
-                >
-                  <div
-                    className={`rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 ${
-                      isCenter ? 'w-36 h-52 md:w-48 md:h-72' : 'w-24 h-36 md:w-32 md:h-48'
-                    }`}
-                  >
-                    {novel.cover_url ? (
-                      <Image
-                        src={novel.cover_url}
-                        alt={novel.title}
-                        fill
-                        className="object-cover"
-                        sizes={isCenter ? '(max-width: 768px) 144px, 192px' : '(max-width: 768px) 96px, 128px'}
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-accent flex items-center justify-center text-3xl text-primary font-serif">
-                        {novel.title?.charAt(0)}
-                      </div>
-                    )}
-                  </div>
-                  {/* 排名角标 */}
-                  <span
-                    className={`absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
-                      isCenter ? 'bg-primary' : 'bg-gray-500'
-                    }`}
-                  >
-                    {position}
-                  </span>
-                </Link>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
       {/* Recommend 区域 */}
       <section className="max-w-6xl mx-auto px-4 pb-8">
         <div className="flex items-center justify-between mb-6">
@@ -382,6 +287,85 @@ export default function Home() {
           <p className="text-foreground/40 text-center py-10">No recommendations yet.</p>
         )}
       </section>
+
+      {/* Hot 区域 */}
+      {hotNovels.length === 3 && (
+        <section className="max-w-6xl mx-auto px-4 pb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">Hot</h2>
+          </div>
+          <div className="flex items-end justify-center gap-4 md:gap-10">
+            <Link
+              href={`/novel/${hotNovels[1].id}`}
+              className="relative flex-shrink-0"
+              onClick={() => track('click_hot_novel', { novel_id: hotNovels[1].id, rank: 2 })}
+            >
+              <div className="w-40 h-56 md:w-52 md:h-72 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300">
+                {hotNovels[1].cover_url ? (
+                  <Image
+                    src={hotNovels[1].cover_url}
+                    alt={hotNovels[1].title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 160px, 208px"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">
+                    {hotNovels[1].title?.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <span className="absolute bottom-2 left-2 text-5xl md:text-6xl font-black text-yellow-400 drop-shadow-lg">2</span>
+            </Link>
+
+            <Link
+              href={`/novel/${hotNovels[0].id}`}
+              className="relative flex-shrink-0"
+              onClick={() => track('click_hot_novel', { novel_id: hotNovels[0].id, rank: 1 })}
+            >
+              <div className="w-52 h-72 md:w-72 md:h-96 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300">
+                {hotNovels[0].cover_url ? (
+                  <Image
+                    src={hotNovels[0].cover_url}
+                    alt={hotNovels[0].title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 208px, 288px"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-accent flex items-center justify-center text-5xl text-primary font-serif">
+                    {hotNovels[0].title?.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <span className="absolute bottom-2 left-2 text-6xl md:text-7xl font-black text-yellow-400 drop-shadow-lg">1</span>
+            </Link>
+
+            <Link
+              href={`/novel/${hotNovels[2].id}`}
+              className="relative flex-shrink-0"
+              onClick={() => track('click_hot_novel', { novel_id: hotNovels[2].id, rank: 3 })}
+            >
+              <div className="w-40 h-56 md:w-52 md:h-72 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300">
+                {hotNovels[2].cover_url ? (
+                  <Image
+                    src={hotNovels[2].cover_url}
+                    alt={hotNovels[2].title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 160px, 208px"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">
+                    {hotNovels[2].title?.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <span className="absolute bottom-2 left-2 text-5xl md:text-6xl font-black text-yellow-400 drop-shadow-lg">3</span>
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* Rising 区域 */}
       <section className="max-w-6xl mx-auto px-4 pb-8">
@@ -440,6 +424,66 @@ export default function Home() {
           </Link>
         </div>
       </nav>
+
+      {/* 继续阅读弹窗（登录后自动弹出） */}
+      {showContinueModal && continueReading && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowContinueModal(false)} />
+          <div className="relative bg-card rounded-2xl shadow-2xl p-6 max-w-md w-full">
+            <button
+              onClick={() => setShowContinueModal(false)}
+              className="absolute top-3 right-3 text-foreground/40 hover:text-foreground text-xl"
+            >
+              ✕
+            </button>
+            <h2 className="text-2xl font-['Jost'] font-black text-foreground mb-4">Continue Reading</h2>
+            <div className="flex gap-4 mb-6">
+              <div className="relative w-20 h-28 flex-shrink-0 rounded-lg overflow-hidden">
+                {continueReading.chapter.novel?.cover_url ? (
+                  <Image
+                    src={continueReading.chapter.novel.cover_url}
+                    alt={continueReading.chapter.novel.title}
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">
+                    {continueReading.chapter.novel?.title?.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-['Jost'] font-bold text-lg text-foreground line-clamp-1">
+                  {continueReading.chapter.novel?.title}
+                </h3>
+                <p className="text-xs text-foreground/50 mb-1">by {continueReading.chapter.novel?.author}</p>
+                <p className="text-xs text-foreground/60">
+                  {formatChapterTitle(continueReading.chapter.order_num, continueReading.chapter.title)}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Link
+                href={`/read/${continueReading.chapter_id}`}
+                className="flex-1 text-center bg-primary text-white py-3 rounded-xl font-bold hover:bg-primary/90 transition"
+                onClick={() => {
+                  setShowContinueModal(false)
+                  track('click_continue_reading_modal', { novel_id: continueReading.chapter.novel_id })
+                }}
+              >
+                Continue
+              </Link>
+              <button
+                onClick={() => setShowContinueModal(false)}
+                className="flex-1 text-center border border-primary/30 text-primary py-3 rounded-xl font-medium hover:bg-primary/5 transition"
+              >
+                Not Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
