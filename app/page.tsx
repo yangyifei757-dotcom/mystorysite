@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabaseClient'
 import { useEffect, useState } from 'react'
 import { track } from '@vercel/analytics'
 
-// 伪随机数生成器
 function mulberry32(seed: number) {
   return function() {
     let t = (seed += 0x6D2B79F5)
@@ -16,13 +15,11 @@ function mulberry32(seed: number) {
   }
 }
 
-// 获取三天周期种子
 function getThreeDaySeed() {
   const now = new Date()
   return Math.floor(now.getTime() / (3 * 24 * 60 * 60 * 1000))
 }
 
-// 格式化章节标题
 function formatChapterTitle(orderNum: number, title: string | null | undefined) {
   const defaultTitle = `Chapter ${orderNum}`
   if (!title || title === defaultTitle || title.trim() === `Chapter ${orderNum}`) {
@@ -89,22 +86,16 @@ export default function Home() {
   useEffect(() => {
     if (novels.length === 0) return
 
-    // 每个区域独立随机取 6 部，不互相排重
     const random = mulberry32(getThreeDaySeed())
     const shuffled = [...novels].sort(() => random() - 0.5)
 
-    // Hot 固定三部
+    // Hot 独立随机取 3 部，可与其他区块重复
     setHotNovels(shuffled.slice(0, 3))
 
-    // Recommend / Rising / New Releases 分别随机取 6 部（可重复）
-    const getSixRandom = () => {
-      const shuffledAgain = [...novels].sort(() => random() - 0.5)
-      return shuffledAgain.slice(0, 6)
-    }
-
-    setRecommendNovels(getSixRandom())
-    setRisingNovels(getSixRandom())
-    setNewReleaseNovels(getSixRandom())
+    // 三个区块各取 6 部，确保互相不重复
+    setRecommendNovels(shuffled.slice(0, 6))
+    setRisingNovels(shuffled.slice(6, 12))
+    setNewReleaseNovels(shuffled.slice(12, 18))
   }, [novels])
 
   useEffect(() => {
