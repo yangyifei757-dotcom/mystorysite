@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
+import { track } from '@vercel/analytics'
 
 export default function PricingPage() {
   const [user, setUser] = useState<any>(null)
@@ -14,15 +15,17 @@ export default function PricingPage() {
       setUser(session?.user || null)
     }
     checkUser()
+    // 埋点：定价页浏览
+    track('view_pricing')
   }, [])
 
-  const handleSubscribe = (paymentLink: string) => {
+  const handleSubscribe = (paymentLink: string, planName: string) => {
+    // 埋点：点击订阅套餐
+    track('click_subscribe_plan', { plan: planName })
     if (!user) {
-      // 未登录 → 跳转登录页，登录后自动回到定价页
       router.push('/login?redirect=/pricing')
       return
     }
-    // 已登录 → 打开支付页面
     window.open(paymentLink, '_blank')
   }
 
@@ -95,7 +98,7 @@ export default function PricingPage() {
               <p className="text-sm text-foreground/50 mt-4 mb-6">{plan.description}</p>
 
               <button
-                onClick={() => handleSubscribe(plan.paymentLink)}
+                onClick={() => handleSubscribe(plan.paymentLink, plan.name)}
                 className="block w-full py-3 bg-primary text-background rounded-xl font-medium hover:bg-primary/90 transition text-center"
               >
                 Subscribe
@@ -104,11 +107,26 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <p className="mt-16 text-foreground/40 text-sm">
+        {/* 信任徽章 */}
+        <div className="flex flex-wrap justify-center gap-4 mt-10 text-sm text-foreground/60">
+          <span className="inline-flex items-center gap-1">
+            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            Secure payment via Creem
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            Cancel anytime
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            Instant access
+          </span>
+        </div>
+
+        <p className="mt-8 text-foreground/40 text-sm">
           After payment, your account will be upgraded shortly. If you have any issues, please contact support.
         </p>
 
-        {/* 新增：取消订阅提示 */}
         <p className="text-xs text-foreground/40 mt-4">
           You can cancel anytime from your customer portal or order confirmation email.
         </p>
