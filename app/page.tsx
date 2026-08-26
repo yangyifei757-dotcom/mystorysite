@@ -41,7 +41,6 @@ export default function Home() {
   const [risingNovels, setRisingNovels] = useState<any[]>([])
   const [newReleaseNovels, setNewReleaseNovels] = useState<any[]>([])
 
-  // 新增：You May Like 区块数据
   const [youMayLikeNovels, setYouMayLikeNovels] = useState<any[]>([])
   const [remainingYouMayLike, setRemainingYouMayLike] = useState<any[]>([])
   const [loadingMoreYouMayLike, setLoadingMoreYouMayLike] = useState(false)
@@ -89,24 +88,74 @@ export default function Home() {
     fetchData()
   }, [])
 
-  // 各区块数据分配
+  // 各区块数据分配（确保不重复）
   useEffect(() => {
     if (novels.length === 0) return
 
     const random = mulberry32(getThreeDaySeed())
     const shuffled = [...novels].sort(() => random() - 0.5)
 
+    // Hot 独立随机 3 部
     setHotNovels(shuffled.slice(0, 3))
 
-    setRecommendNovels(shuffled.slice(0, 6))
-    setRisingNovels(shuffled.slice(6, 12))
-    setNewReleaseNovels(novels.slice(0, 6)) // 最新六部
+    // 记录已使用的作品 ID，避免区块间重复
+    const usedIds = new Set<string>()
 
-    // You May Like：随机15部，剩余放入池子用于下拉加载
-    const random15 = shuffled.slice(0, 15)
-    setYouMayLikeNovels(random15)
-    setRemainingYouMayLike(shuffled.slice(15))
+    // Recommend 6 部
+    const recommend = shuffled.slice(0, 6)
+    recommend.forEach(n => usedIds.add(n.id))
+    setRecommendNovels(recommend)
+
+    // Rising 6 部（不与 Recommend 重复）
+    const risingPool = shuffled.filter(n => !usedIds.has(n.id))
+    const rising = risingPool.slice(0, 6)
+    rising.forEach(n => usedIds.add(n.id))
+    setRisingNovels(rising)
+
+    // New Releases 最新 6 部，且不与前面重复
+    const newRelease = novels
+      .filter(n => !usedIds.has(n.id))
+      .slice(0, 6)
+    newRelease.forEach(n => usedIds.add(n.id))
+    setNewReleaseNovels(newRelease)
+
+    // You May Like 从剩余作品中随机取 15 部，内部不重复
+    const remainingForYouMayLike = shuffled.filter(n => !usedIds.has(n.id))
+    const initialYouMayLike = remainingForYouMayLike.slice(0, 15)
+    setYouMayLikeNovels(initialYouMayLike)
+    setRemainingYouMayLike(remainingForYouMayLike.slice(15))
   }, [novels])
+
+  // 下拉加载更多（每次加载 1 部，不重复）
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!youMayLikeRef.current) return
+      const scrollTop = window.scrollY || document.documentElement.scrollTop
+      const scrollHeight = document.documentElement.scrollHeight
+      const clientHeight = window.innerHeight
+
+      if (
+        scrollTop + clientHeight >= scrollHeight - 200 &&
+        remainingYouMayLike.length > 0 &&
+        !loadingMoreYouMayLike
+      ) {
+        setLoadingMoreYouMayLike(true)
+        const nextNovel = remainingYouMayLike[0]
+        setRemainingYouMayLike(prev => prev.slice(1))
+        setYouMayLikeNovels(prev => {
+          // 再次确保不重复
+          if (prev.some(n => n.id === nextNovel.id)) {
+            return prev
+          }
+          return [...prev, nextNovel]
+        })
+        setLoadingMoreYouMayLike(false)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [remainingYouMayLike, loadingMoreYouMayLike])
 
   // Hero Banner 自动轮播
   useEffect(() => {
@@ -116,32 +165,6 @@ export default function Home() {
     }, 5000)
     return () => clearInterval(timer)
   }, [novels])
-
-  // 下拉加载更多（监听滚动到底部）
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!youMayLikeRef.current) return
-      const scrollTop = window.scrollY || document.documentElement.scrollTop
-      const scrollHeight = document.documentElement.scrollHeight
-      const clientHeight = window.innerHeight
-
-      // 接近底部且还有剩余作品且不在加载中
-      if (
-        scrollTop + clientHeight >= scrollHeight - 200 &&
-        remainingYouMayLike.length > 0 &&
-        !loadingMoreYouMayLike
-      ) {
-        setLoadingMoreYouMayLike(true)
-        const nextNovel = remainingYouMayLike[0]
-        setRemainingYouMayLike(prev => prev.slice(1))
-        setYouMayLikeNovels(prev => [...prev, nextNovel])
-        setLoadingMoreYouMayLike(false)
-      }
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [remainingYouMayLike, loadingMoreYouMayLike])
 
   const bannerNovels = novels.slice(0, 5)
   const getBannerItems = () => {
@@ -385,7 +408,7 @@ export default function Home() {
         )}
       </section>
 
-      {/* New Releases 区域（最新6部） */}
+      {/* New Releases 区域 */}
       <section className="max-w-6xl mx-auto px-4 pb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">New Releases</h2>
