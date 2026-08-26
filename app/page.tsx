@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabaseClient'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { track } from '@vercel/analytics'
 
 function mulberry32(seed: number) {
@@ -40,6 +40,12 @@ export default function Home() {
   const [recommendNovels, setRecommendNovels] = useState<any[]>([])
   const [risingNovels, setRisingNovels] = useState<any[]>([])
   const [newReleaseNovels, setNewReleaseNovels] = useState<any[]>([])
+
+  // 新增：You May Like 区块数据
+  const [youMayLikeNovels, setYouMayLikeNovels] = useState<any[]>([])
+  const [remainingYouMayLike, setRemainingYouMayLike] = useState<any[]>([])
+  const [loadingMoreYouMayLike, setLoadingMoreYouMayLike] = useState(false)
+  const youMayLikeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,21 +89,26 @@ export default function Home() {
     fetchData()
   }, [])
 
+  // 各区块数据分配
   useEffect(() => {
     if (novels.length === 0) return
 
     const random = mulberry32(getThreeDaySeed())
     const shuffled = [...novels].sort(() => random() - 0.5)
 
-    // Hot 独立随机取 3 部，可与其他区块重复
     setHotNovels(shuffled.slice(0, 3))
 
-    // 三个区块各取 6 部，确保互相不重复
     setRecommendNovels(shuffled.slice(0, 6))
     setRisingNovels(shuffled.slice(6, 12))
-    setNewReleaseNovels(shuffled.slice(12, 18))
+    setNewReleaseNovels(novels.slice(0, 6)) // 最新六部
+
+    // You May Like：随机15部，剩余放入池子用于下拉加载
+    const random15 = shuffled.slice(0, 15)
+    setYouMayLikeNovels(random15)
+    setRemainingYouMayLike(shuffled.slice(15))
   }, [novels])
 
+  // Hero Banner 自动轮播
   useEffect(() => {
     if (novels.length < 3) return
     const timer = setInterval(() => {
@@ -105,6 +116,32 @@ export default function Home() {
     }, 5000)
     return () => clearInterval(timer)
   }, [novels])
+
+  // 下拉加载更多（监听滚动到底部）
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!youMayLikeRef.current) return
+      const scrollTop = window.scrollY || document.documentElement.scrollTop
+      const scrollHeight = document.documentElement.scrollHeight
+      const clientHeight = window.innerHeight
+
+      // 接近底部且还有剩余作品且不在加载中
+      if (
+        scrollTop + clientHeight >= scrollHeight - 200 &&
+        remainingYouMayLike.length > 0 &&
+        !loadingMoreYouMayLike
+      ) {
+        setLoadingMoreYouMayLike(true)
+        const nextNovel = remainingYouMayLike[0]
+        setRemainingYouMayLike(prev => prev.slice(1))
+        setYouMayLikeNovels(prev => [...prev, nextNovel])
+        setLoadingMoreYouMayLike(false)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [remainingYouMayLike, loadingMoreYouMayLike])
 
   const bannerNovels = novels.slice(0, 5)
   const getBannerItems = () => {
@@ -291,7 +328,7 @@ export default function Home() {
         )}
       </section>
 
-      {/* Hot 区域（横向滚动，完整显示） */}
+      {/* Hot 区域 */}
       {hotNovels.length === 3 && (
         <section className="max-w-6xl mx-auto px-4 pb-8">
           <div className="flex items-center justify-between mb-6">
@@ -299,73 +336,32 @@ export default function Home() {
           </div>
           <div className="overflow-x-auto pb-2">
             <div className="flex items-end gap-4 md:gap-10 w-max mx-auto">
-              {/* 左侧：排名2 */}
-              <Link
-                href={`/novel/${hotNovels[1].id}`}
-                className="relative flex-shrink-0"
-                onClick={() => track('click_hot_novel', { novel_id: hotNovels[1].id, rank: 2 })}
-              >
+              <Link href={`/novel/${hotNovels[1].id}`} className="relative flex-shrink-0" onClick={() => track('click_hot_novel', { novel_id: hotNovels[1].id, rank: 2 })}>
                 <div className="w-40 h-56 md:w-52 md:h-72 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300">
                   {hotNovels[1].cover_url ? (
-                    <Image
-                      src={hotNovels[1].cover_url}
-                      alt={hotNovels[1].title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 160px, 208px"
-                    />
+                    <Image src={hotNovels[1].cover_url} alt={hotNovels[1].title} fill className="object-cover" sizes="(max-width: 768px) 160px, 208px" />
                   ) : (
-                    <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">
-                      {hotNovels[1].title?.charAt(0)}
-                    </div>
+                    <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{hotNovels[1].title?.charAt(0)}</div>
                   )}
                 </div>
                 <span className="absolute bottom-2 left-2 text-5xl md:text-6xl font-black text-yellow-400 drop-shadow-lg">2</span>
               </Link>
-
-              {/* 中间：排名1（最大） */}
-              <Link
-                href={`/novel/${hotNovels[0].id}`}
-                className="relative flex-shrink-0"
-                onClick={() => track('click_hot_novel', { novel_id: hotNovels[0].id, rank: 1 })}
-              >
+              <Link href={`/novel/${hotNovels[0].id}`} className="relative flex-shrink-0" onClick={() => track('click_hot_novel', { novel_id: hotNovels[0].id, rank: 1 })}>
                 <div className="w-52 h-72 md:w-72 md:h-96 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300">
                   {hotNovels[0].cover_url ? (
-                    <Image
-                      src={hotNovels[0].cover_url}
-                      alt={hotNovels[0].title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 208px, 288px"
-                    />
+                    <Image src={hotNovels[0].cover_url} alt={hotNovels[0].title} fill className="object-cover" sizes="(max-width: 768px) 208px, 288px" />
                   ) : (
-                    <div className="h-full w-full bg-accent flex items-center justify-center text-5xl text-primary font-serif">
-                      {hotNovels[0].title?.charAt(0)}
-                    </div>
+                    <div className="h-full w-full bg-accent flex items-center justify-center text-5xl text-primary font-serif">{hotNovels[0].title?.charAt(0)}</div>
                   )}
                 </div>
                 <span className="absolute bottom-2 left-2 text-6xl md:text-7xl font-black text-yellow-400 drop-shadow-lg">1</span>
               </Link>
-
-              {/* 右侧：排名3 */}
-              <Link
-                href={`/novel/${hotNovels[2].id}`}
-                className="relative flex-shrink-0"
-                onClick={() => track('click_hot_novel', { novel_id: hotNovels[2].id, rank: 3 })}
-              >
+              <Link href={`/novel/${hotNovels[2].id}`} className="relative flex-shrink-0" onClick={() => track('click_hot_novel', { novel_id: hotNovels[2].id, rank: 3 })}>
                 <div className="w-40 h-56 md:w-52 md:h-72 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300">
                   {hotNovels[2].cover_url ? (
-                    <Image
-                      src={hotNovels[2].cover_url}
-                      alt={hotNovels[2].title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 160px, 208px"
-                    />
+                    <Image src={hotNovels[2].cover_url} alt={hotNovels[2].title} fill className="object-cover" sizes="(max-width: 768px) 160px, 208px" />
                   ) : (
-                    <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">
-                      {hotNovels[2].title?.charAt(0)}
-                    </div>
+                    <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{hotNovels[2].title?.charAt(0)}</div>
                   )}
                 </div>
                 <span className="absolute bottom-2 left-2 text-5xl md:text-6xl font-black text-yellow-400 drop-shadow-lg">3</span>
@@ -389,7 +385,7 @@ export default function Home() {
         )}
       </section>
 
-      {/* New Releases 区域 */}
+      {/* New Releases 区域（最新6部） */}
       <section className="max-w-6xl mx-auto px-4 pb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">New Releases</h2>
@@ -400,6 +396,23 @@ export default function Home() {
           </div>
         ) : (
           <p className="text-foreground/40 text-center py-10">New stories coming soon.</p>
+        )}
+      </section>
+
+      {/* You May Like 区域（随机15部，无限下拉） */}
+      <section ref={youMayLikeRef} className="max-w-6xl mx-auto px-4 pb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground">You May Like</h2>
+        </div>
+        {youMayLikeNovels.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {youMayLikeNovels.map((novel: any) => renderNovelCard(novel))}
+          </div>
+        ) : (
+          <p className="text-foreground/40 text-center py-10">Explore more stories below.</p>
+        )}
+        {remainingYouMayLike.length > 0 && (
+          <p className="text-center text-xs text-foreground/40 mt-4">Scroll down to load more stories...</p>
         )}
       </section>
 
@@ -433,59 +446,32 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* 继续阅读弹窗（登录后自动弹出） */}
+      {/* 继续阅读弹窗 */}
       {showContinueModal && continueReading && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowContinueModal(false)} />
           <div className="relative bg-card rounded-2xl shadow-2xl p-6 max-w-md w-full">
-            <button
-              onClick={() => setShowContinueModal(false)}
-              className="absolute top-3 right-3 text-foreground/40 hover:text-foreground text-xl"
-            >
-              ✕
-            </button>
+            <button onClick={() => setShowContinueModal(false)} className="absolute top-3 right-3 text-foreground/40 hover:text-foreground text-xl">✕</button>
             <h2 className="text-2xl font-['Jost'] font-black text-foreground mb-4">Continue Reading</h2>
             <div className="flex gap-4 mb-6">
               <div className="relative w-20 h-28 flex-shrink-0 rounded-lg overflow-hidden">
                 {continueReading.chapter.novel?.cover_url ? (
-                  <Image
-                    src={continueReading.chapter.novel.cover_url}
-                    alt={continueReading.chapter.novel.title}
-                    fill
-                    className="object-cover"
-                    sizes="80px"
-                  />
+                  <Image src={continueReading.chapter.novel.cover_url} alt={continueReading.chapter.novel.title} fill className="object-cover" sizes="80px" />
                 ) : (
-                  <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">
-                    {continueReading.chapter.novel?.title?.charAt(0)}
-                  </div>
+                  <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">{continueReading.chapter.novel?.title?.charAt(0)}</div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-['Jost'] font-bold text-lg text-foreground line-clamp-1">
-                  {continueReading.chapter.novel?.title}
-                </h3>
+                <h3 className="font-['Jost'] font-bold text-lg text-foreground line-clamp-1">{continueReading.chapter.novel?.title}</h3>
                 <p className="text-xs text-foreground/50 mb-1">by {continueReading.chapter.novel?.author}</p>
-                <p className="text-xs text-foreground/60">
-                  {formatChapterTitle(continueReading.chapter.order_num, continueReading.chapter.title)}
-                </p>
+                <p className="text-xs text-foreground/60">{formatChapterTitle(continueReading.chapter.order_num, continueReading.chapter.title)}</p>
               </div>
             </div>
             <div className="flex gap-3">
-              <Link
-                href={`/read/${continueReading.chapter_id}`}
-                className="flex-1 text-center bg-primary text-white py-3 rounded-xl font-bold hover:bg-primary/90 transition"
-                onClick={() => {
-                  setShowContinueModal(false)
-                  track('click_continue_reading_modal', { novel_id: continueReading.chapter.novel_id })
-                }}
-              >
+              <Link href={`/read/${continueReading.chapter_id}`} className="flex-1 text-center bg-primary text-white py-3 rounded-xl font-bold hover:bg-primary/90 transition" onClick={() => { setShowContinueModal(false); track('click_continue_reading_modal', { novel_id: continueReading.chapter.novel_id }) }}>
                 Continue
               </Link>
-              <button
-                onClick={() => setShowContinueModal(false)}
-                className="flex-1 text-center border border-primary/30 text-primary py-3 rounded-xl font-medium hover:bg-primary/5 transition"
-              >
+              <button onClick={() => setShowContinueModal(false)} className="flex-1 text-center border border-primary/30 text-primary py-3 rounded-xl font-medium hover:bg-primary/5 transition">
                 Not Now
               </button>
             </div>
