@@ -10,7 +10,7 @@ export default function PrivacyPolicyPage() {
         <h2>How we use information</h2>
         <p>Your data is used to personalize your reading experience and process payments. We do not sell or share your personal information with third parties.</p>
         <h2>Contact</h2>
-        <p>If you have questions, contact us at yangyifei757@gmail.com.</p>
+        <p>If you have questions, contact us at support@ivynovel.com.</p>
       </div>
     </main>
   )
