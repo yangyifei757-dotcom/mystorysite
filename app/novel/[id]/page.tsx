@@ -41,7 +41,6 @@ export default function NovelPage() {
       setChapters(chaptersData || [])
       if (novelData) {
         document.title = `${novelData.title} - IvyNovel`
-        // 埋点：进入详情页
         track('view_novel_detail', { novel_id: id, title: novelData.title })
       }
 
@@ -106,18 +105,70 @@ export default function NovelPage() {
 
   const tag = Array.isArray(novel.tags) ? novel.tags[0] : novel.tags
 
+  // 推荐卡片渲染函数（与首页 Recommend 保持一致）
+  const renderRecommendationCard = (rec: any) => {
+    const recTag = Array.isArray(rec.tags) ? rec.tags[0] : rec.tags
+    return (
+      <Link
+        key={rec.id}
+        href={`/novel/${rec.id}`}
+        className="group flex gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
+        onClick={() => track('click_recommendation', { novel_id: rec.id, source: 'detail_page' })}
+      >
+        <div className="relative w-24 h-32 md:w-28 md:h-40 flex-shrink-0 rounded-lg overflow-hidden">
+          {rec.cover_url ? (
+            <Image
+              src={rec.cover_url}
+              alt={rec.title}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 640px) 96px, 112px"
+            />
+          ) : (
+            <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">
+              {rec.title?.charAt(0)}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 flex flex-col h-full justify-between">
+          <div>
+            <h3 className="font-['Jost'] font-black text-lg md:text-xl leading-tight text-foreground mb-1 line-clamp-2 min-h-[2.5rem] md:min-h-[3rem]">
+              {rec.title}
+            </h3>
+            <p className="text-xs text-foreground/50 mb-1">by {rec.author}</p>
+            {recTag && (
+              <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mb-2">
+                {recTag}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-foreground/60 line-clamp-2">
+            {rec.description}
+          </p>
+        </div>
+      </Link>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-background pb-16">
-      {/* 顶部：Logo + 网站名，点击回首页 */}
-      <header className="pt-6 pb-4 px-4 text-center">
-        <Link href="/" className="inline-flex items-center gap-3">
-          <Image src="/logo.png" alt="IvyNovel Logo" width={140} height={40} className="h-10 w-auto" />
-          <span className="text-2xl font-['Jost'] font-black text-primary tracking-wide">IvyNovel</span>
-        </Link>
+      {/* 顶部：与首页一致的固定导航，Logo 左对齐 */}
+      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <Image src="/logo.png" alt="IvyNovel Logo" width={180} height={60} className="h-12 w-auto" priority />
+            <span className="text-2xl font-['Jost'] font-black text-primary tracking-wide">IvyNovel</span>
+          </Link>
+          <Link href="/pricing" className="text-sm font-medium text-foreground/70 hover:text-primary transition">
+            Pricing
+          </Link>
+        </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4">
-        {/* 顶部：封面 + 基础信息 */}
+      {/* 主内容区，添加顶部内边距避免被固定 header 遮挡 */}
+      <div className="max-w-4xl mx-auto px-4 pt-24">
+        {/* 封面 + 基础信息 */}
         <div className="flex flex-col md:flex-row gap-6 md:gap-10 mb-8 mt-4">
           {/* 封面 */}
           <div className="w-full md:w-1/3 flex-shrink-0 mx-auto md:mx-0">
@@ -138,7 +189,7 @@ export default function NovelPage() {
             </div>
           </div>
 
-          {/* 右侧：书名、作者、Tag，以及 Read 按钮 */}
+          {/* 右侧信息 */}
           <div className="flex-1 flex flex-col justify-start md:justify-start md:pt-2">
             <h1 className="text-3xl md:text-4xl font-['Jost'] font-black text-foreground leading-tight mb-3">
               {novel.title}
@@ -200,7 +251,6 @@ export default function NovelPage() {
                 <p key={i} className="mb-4">{p}</p>
               ))}
             </div>
-            {/* Continue Reading 按钮（居中） */}
             {nextChapter && (
               <div className="flex justify-center mt-6">
                 <Link
@@ -217,42 +267,19 @@ export default function NovelPage() {
           <div className="mb-8 p-6 bg-card rounded-xl border border-border text-center">
             <p className="text-foreground/50 mb-4">This chapter is locked. Subscribe to read the full story.</p>
             {firstChapter && (
-              <Link
-                href={`/read/${firstChapter.id}`}
-                className="inline-block bg-primary text-white px-6 py-3 rounded-full font-medium hover:bg-primary/90 transition"
-                onClick={() => track('click_subscribe_from_detail', { novel_id: id })}
-              >
+              <Link href={`/read/${firstChapter.id}`} className="inline-block bg-primary text-white px-6 py-3 rounded-full font-medium hover:bg-primary/90 transition">
                 Start Reading
               </Link>
             )}
           </div>
         )}
 
-        {/* 推荐区域 */}
+        {/* 推荐区域：小封面左右布局，与首页 Recommend 相同 */}
         {recommendations.length > 0 && (
           <div className="mt-16">
             <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground mb-6">You May Also Like</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-              {recommendations.map((rec: any) => (
-                <Link
-                  key={rec.id}
-                  href={`/novel/${rec.id}`}
-                  className="group flex flex-col"
-                  onClick={() => track('click_recommendation', { novel_id: rec.id, source: 'detail_page' })}
-                >
-                  <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300">
-                    {rec.cover_url ? (
-                      <Image src={rec.cover_url} alt={rec.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
-                    ) : (
-                      <div className="h-full w-full bg-accent flex items-center justify-center text-3xl text-primary font-serif">{rec.title?.charAt(0)}</div>
-                    )}
-                  </div>
-                  <div className="mt-2 px-1">
-                    <h3 className="font-['Jost'] font-bold text-lg md:text-xl text-foreground line-clamp-1">{rec.title}</h3>
-                    <p className="text-xs text-foreground/50">{rec.author}</p>
-                  </div>
-                </Link>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {recommendations.map((rec: any) => renderRecommendationCard(rec))}
             </div>
           </div>
         )}
