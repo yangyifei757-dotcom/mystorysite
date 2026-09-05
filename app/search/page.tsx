@@ -82,8 +82,11 @@ function SearchResults() {
       {loading ? (
         <p className="text-foreground/40">Searching...</p>
       ) : results.length === 0 ? (
-        <p className="text-foreground/40">No novels found. Try a different keyword.</p>
-      ) : (
+  <div className="text-center py-10">
+    <p className="text-foreground/50 mb-2">More stories in this category coming soon. Check back later!</p>
+    <p className="text-sm text-foreground/40">Meanwhile, explore other tags or subscribe for unlimited access to all current stories.</p>
+  </div>
+) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {results.map((novel: any) => (
             <Link key={novel.id} href={`/novel/${novel.id}`} className="group flex flex-col">
