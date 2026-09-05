@@ -71,6 +71,13 @@ function SearchResults() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* 搜索词标题 */}
+      {query && (
+        <h1 className="text-2xl font-serif text-foreground mb-6">
+          Results for “{query}”
+        </h1>
+      )}
+
       {/* 搜索框 */}
       <div className="mb-6">
         <form
@@ -118,8 +125,13 @@ function SearchResults() {
         <p className="text-foreground/40">Searching...</p>
       ) : results.length === 0 ? (
         <div className="text-center py-10">
-          <p className="text-foreground/50 mb-2">More stories in this category coming soon. Check back later!</p>
-          <p className="text-sm text-foreground/40">Meanwhile, explore other tags or subscribe for unlimited access to all current stories.</p>
+          <p className="text-foreground/50 mb-2">No results for “{query}”.</p>
+          <p className="text-sm text-foreground/40 mb-4">Try one of these popular tags:</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link href="/search?q=Romance" className="text-xs bg-accent text-accent-foreground px-3 py-1 rounded-full hover:bg-primary/10 hover:text-primary transition">Romance</Link>
+            <Link href="/search?q=Mature" className="text-xs bg-accent text-accent-foreground px-3 py-1 rounded-full hover:bg-primary/10 hover:text-primary transition">Mature</Link>
+            <Link href="/search?q=Werewolf" className="text-xs bg-accent text-accent-foreground px-3 py-1 rounded-full hover:bg-primary/10 hover:text-primary transition">Werewolf</Link>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
