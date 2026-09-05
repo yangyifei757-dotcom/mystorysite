@@ -21,7 +21,7 @@ function SearchResults() {
         .from('novels')
         .select('*')
         .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
-        .eq('status', 'published')
+        .in('status', ['published', 'restricted'])
         .order('created_at', { ascending: false })
         .limit(20)
 
