@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
-import { track } from '@vercel/analytics'
 
 const FONT_SIZES = [16, 18, 20, 22, 24]
 const BG_STYLES = {
@@ -130,10 +130,8 @@ export default function ReadPage() {
         setNextOrderNum(chapterData.order_num + 1)
         if (chapterData.order_num === free && !subscribed) {
           setShowPaywall(true)
-          track('hit_paywall', { novel_id: chapterData.novel.id, chapter_id: chapterId })
         }
       } else {
-        // 付费章节：未登录 -> 跳登录页并带回跳；已登录未订阅 -> 跳定价页
         if (!user) {
           router.push(`/login?redirect=/read/${chapterId}`)
           return
@@ -170,7 +168,6 @@ export default function ReadPage() {
     const isFreeNext = next.order_num <= freeChapters
     if (!isFreeNext && !hasSubscription) {
       setShowPaywall(true)
-      track('hit_paywall', { novel_id: novel.id, chapter_id: next.id, source: 'auto_load' })
       return
     }
 
@@ -248,16 +245,21 @@ export default function ReadPage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
-      {/* 顶部工具栏 */}
+      {/* 顶部工具栏：Logo + 网站名，点击回首页 */}
       <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-sm border-b border-border/50 px-4 py-2 flex items-center justify-between">
-        <div className="flex gap-3">
-          <Link href={`/novel/${novel?.id || ''}`} className="text-sm hover:text-primary transition">
-            ← Novel
-          </Link>
-          <Link href="/" className="text-sm hover:text-primary transition">
-            Home
-          </Link>
-        </div>
+        <Link href="/" className="flex items-center gap-3">
+          <Image
+            src="/logo.png"
+            alt="IvyNovel Logo"
+            width={140}
+            height={40}
+            className="h-10 w-auto"
+            priority
+          />
+          <span className="text-xl font-['Jost'] font-black text-primary tracking-wide">IvyNovel</span>
+        </Link>
+
+        {/* 右侧功能按钮 */}
         <div className="flex gap-2 items-center text-sm">
           <button onClick={() => setShowTOC(true)} className="text-sm hover:text-primary transition">
             ☰ Chapters
@@ -299,6 +301,7 @@ export default function ReadPage() {
           <div className="mt-8 text-center text-foreground/40 text-sm">Loading next chapter...</div>
         )}
 
+        {/* 付费墙卡片 */}
         {showPaywall && !hasSubscription && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
@@ -309,7 +312,6 @@ export default function ReadPage() {
             <Link
               href="/pricing"
               className="inline-block bg-primary text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-primary/90 transition shadow-md hover:shadow-lg"
-              onClick={() => track('click_subscribe_from_paywall', { novel_id: novel.id, chapter_id: chapterId })}
             >
               Subscribe Now
             </Link>
