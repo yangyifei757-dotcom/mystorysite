@@ -17,14 +17,13 @@ export default function AdminNovelsPage() {
     author: '',
     description: '',
     cover_url: '',
-    tags: 'Romance', // 默认 Romance
+    tags: 'Romance',
     status: 'published',
     free_chapters: 3,
   })
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [message, setMessage] = useState('')
 
-  // 自动登录：页面加载时检查 localStorage 中的密码
   useEffect(() => {
     const savedPassword = localStorage.getItem('admin_password')
     if (savedPassword === ADMIN_PASSWORD) {
@@ -64,7 +63,7 @@ export default function AdminNovelsPage() {
       description: novel.description || '',
       cover_url: novel.cover_url || '',
       tags: Array.isArray(novel.tags) ? (novel.tags[0] || 'Romance') : (novel.tags || 'Romance'),
-      status: novel.status || 'draft',
+      status: novel.status || 'published',
       free_chapters: novel.free_chapters || 3,
     })
     setCoverFile(null)
@@ -125,7 +124,7 @@ export default function AdminNovelsPage() {
         coverBase64,
         coverFileName,
         coverFileType,
-        tags: editForm.tags, // 字符串直接传递，后端会转为数组
+        tags: editForm.tags,
         status: editForm.status,
         freeChapters: editForm.free_chapters,
       }),
@@ -141,7 +140,6 @@ export default function AdminNovelsPage() {
     }
   }
 
-  // 切换上下架状态
   const toggleStatus = async (novel: any) => {
     const newStatus = novel.status === 'published' ? 'draft' : 'published'
     const adminPassword = localStorage.getItem('admin_password') || ''
@@ -234,23 +232,21 @@ export default function AdminNovelsPage() {
               </div>
               <div>
                 <label className="block text-sm text-foreground/60 mb-1">Tag (single select)</label>
-                <select
-                  value={editForm.tags}
-                  onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
-                  className="w-full p-2 rounded bg-background border border-border text-foreground"
-                >
+                <select value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="w-full p-2 rounded bg-background border border-border text-foreground">
                   <option value="Romance">Romance</option>
                   <option value="Mafia">Mafia</option>
                   <option value="Werewolf">Werewolf</option>
                   <option value="Steamy">Steamy</option>
                   <option value="Urban">Urban</option>
+                  <option value="Mature">Mature</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm text-foreground/60 mb-1">Status</label>
                 <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className="w-full p-2 rounded bg-background border border-border text-foreground">
-                  <option value="published">Published</option>
-                  <option value="draft">Draft (Hidden)</option>
+                  <option value="published">Published (Public)</option>
+                  <option value="restricted">Restricted (Hidden from homepage)</option>
+                  <option value="draft">Draft</option>
                 </select>
               </div>
               <div>
