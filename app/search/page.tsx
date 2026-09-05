@@ -38,31 +38,53 @@ function SearchResults() {
     setLoading(true)
 
     const fetchResults = async () => {
-      // 查询小说，同时获取每本小说的第一章节 ID
-      const { data: novels, error } = await supabase
+      // 同时匹配标题、作者和标签
+      // 使用 .or 和 .overlaps 更可靠
+      let request = supabase
         .from('novels')
         .select(`
           *,
           chapters (id, order_num)
         `)
-        .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
+        .or(`title.ilike.%${query}%,author.ilike.%${query}%,tags.cs.{${query}}`)
         .in('status', ['published', 'restricted'])
         .order('created_at', { ascending: false })
         .limit(20)
 
+      const { data: novels, error } = await request
+
       if (error) {
         console.error('搜索错误:', error)
+        // 如果 .cs 语法出错，回退到简单标题搜索
+        const fallback = await supabase
+          .from('novels')
+          .select(`
+            *,
+            chapters (id, order_num)
+          `)
+          .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
+          .in('status', ['published', 'restricted'])
+          .order('created_at', { ascending: false })
+          .limit(20)
+
+        if (fallback.error) {
+          console.error('回退搜索也失败:', fallback.error)
+          setLoading(false)
+          return
+        }
+
+        const processed = (fallback.data || []).map((novel: any) => {
+          const firstChapter = (novel.chapters || []).find((ch: any) => ch.order_num === 1)
+          return { ...novel, firstChapterId: firstChapter?.id || null }
+        })
+        setResults(processed)
         setLoading(false)
         return
       }
 
-      // 为每部小说找到 order_num 为 1 的章节 ID
       const processed = (novels || []).map((novel: any) => {
         const firstChapter = (novel.chapters || []).find((ch: any) => ch.order_num === 1)
-        return {
-          ...novel,
-          firstChapterId: firstChapter?.id || null,
-        }
+        return { ...novel, firstChapterId: firstChapter?.id || null }
       })
 
       setResults(processed)
