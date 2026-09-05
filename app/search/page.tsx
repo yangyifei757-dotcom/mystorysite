@@ -17,11 +17,18 @@ function SearchResults() {
     setLoading(true)
 
     const fetchResults = async () => {
-      const { data, error } = await supabase
+      let request = supabase
         .from('novels')
         .select('*')
         .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
         .in('status', ['published', 'restricted'])
+
+      const isMatureSearch = query.toLowerCase().includes('mature') || query.toLowerCase().includes('steamy') || query.toLowerCase().includes('sensual')
+      if (!isMatureSearch) {
+        request = request.not('tags', 'cs', '{"Mature"}')
+      }
+
+      const { data, error } = await request
         .order('created_at', { ascending: false })
         .limit(20)
 
@@ -37,6 +44,19 @@ function SearchResults() {
       <h1 className="text-2xl font-serif text-foreground mb-6">
         {query ? `Results for "${query}"` : 'Search'}
       </h1>
+
+      {/* 热门标签 */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {['Romance', 'Mature', 'Werewolf', 'Urban', 'Heiress'].map((term) => (
+          <Link
+            key={term}
+            href={`/search?q=${encodeURIComponent(term)}`}
+            className="text-xs bg-accent text-accent-foreground px-3 py-1.5 rounded-full hover:bg-primary/10 hover:text-primary transition"
+          >
+            {term}
+          </Link>
+        ))}
+      </div>
 
       {loading ? (
         <p className="text-foreground/40">Searching...</p>
