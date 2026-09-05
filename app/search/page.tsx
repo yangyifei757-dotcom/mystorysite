@@ -13,7 +13,7 @@ function SearchResults() {
   const [loading, setLoading] = useState(false)
   const [hasSubscription, setHasSubscription] = useState(false)
 
-  // 检查当前用户订阅状态
+  // 检查订阅状态
   useEffect(() => {
     const checkSubscription = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -71,9 +71,26 @@ function SearchResults() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-serif text-foreground mb-6">
-        {query ? `Results for "${query}"` : 'Search'}
-      </h1>
+      {/* 搜索框 */}
+      <div className="mb-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const q = (e.target as any).q.value
+            if (q.trim()) window.location.href = `/search?q=${encodeURIComponent(q.trim())}`
+          }}
+          className="relative"
+        >
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-foreground/40">🔍</span>
+          <input
+            type="text"
+            name="q"
+            defaultValue={query}
+            placeholder="Search novels or authors..."
+            className="w-full pl-9 pr-3 py-2.5 rounded-full border border-border bg-white text-foreground text-sm focus:outline-none focus:border-primary transition"
+          />
+        </form>
+      </div>
 
       {/* 热门标签 */}
       <div className="flex flex-wrap gap-3 mb-6">
@@ -130,7 +147,7 @@ function SearchResults() {
         </div>
       )}
 
-      {/* 订阅引导横幅（仅未订阅用户可见，放在结果下方） */}
+      {/* 订阅引导横幅（仅未订阅用户，结果下方） */}
       {!hasSubscription && !loading && (
         <div className="mt-8 p-4 bg-gradient-to-r from-primary/10 to-purple-100/50 rounded-xl border border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-sm text-foreground/70 text-center sm:text-left">
