@@ -5,11 +5,14 @@ import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 
 const ADMIN_PASSWORD = 'mynovel2026'
+const PAGE_SIZE = 20
 
 export default function AdminNovelsPage() {
   const [authorized, setAuthorized] = useState(false)
   const [passwordInput, setPasswordInput] = useState('')
   const [novels, setNovels] = useState<any[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [editingNovel, setEditingNovel] = useState<any>(null)
   const [editForm, setEditForm] = useState<any>({
@@ -28,19 +31,27 @@ export default function AdminNovelsPage() {
     const savedPassword = localStorage.getItem('admin_password')
     if (savedPassword === ADMIN_PASSWORD) {
       setAuthorized(true)
-      fetchNovels()
+      fetchNovels(1)
     } else {
       setLoading(false)
     }
   }, [])
 
-  const fetchNovels = async () => {
-    const { data, error } = await supabase
+  const fetchNovels = async (page: number) => {
+    setLoading(true)
+    const from = (page - 1) * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+
+    const { data, count, error } = await supabase
       .from('novels')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
+      .range(from, to)
+
     if (!error && data) {
       setNovels(data)
+      setTotalCount(count || 0)
+      setCurrentPage(page)
     }
     setLoading(false)
   }
@@ -49,7 +60,7 @@ export default function AdminNovelsPage() {
     if (passwordInput === ADMIN_PASSWORD) {
       setAuthorized(true)
       localStorage.setItem('admin_password', passwordInput)
-      await fetchNovels()
+      fetchNovels(1)
     } else {
       alert('Wrong password')
     }
@@ -134,16 +145,25 @@ export default function AdminNovelsPage() {
     if (res.ok) {
       setMessage('✅ Updated successfully')
       setEditingNovel(null)
-      await fetchNovels()
+      fetchNovels(currentPage)
     } else {
       setMessage('❌ ' + (data.error || 'Update failed'))
     }
   }
 
   const toggleStatus = async (novel: any) => {
-    const newStatus = novel.status === 'published' ? 'draft' : 'published'
-    const adminPassword = localStorage.getItem('admin_password') || ''
+    // 对 restricted 状态不做切换，只切换 published / draft
+    let newStatus = novel.status
+    if (novel.status === 'published') {
+      newStatus = 'draft'
+    } else if (novel.status === 'draft') {
+      newStatus = 'published'
+    } else {
+      alert('Restricted novels cannot be toggled here. Edit them to change status.')
+      return
+    }
 
+    const adminPassword = localStorage.getItem('admin_password') || ''
     const res = await fetch('/api/update-novel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -157,7 +177,7 @@ export default function AdminNovelsPage() {
     const data = await res.json()
     if (res.ok) {
       setMessage(`✅ ${novel.title} is now ${newStatus}`)
-      await fetchNovels()
+      fetchNovels(currentPage)
     } else {
       alert('❌ ' + (data.error || 'Update failed'))
     }
@@ -169,10 +189,12 @@ export default function AdminNovelsPage() {
     if (error) {
       alert('Delete failed: ' + error.message)
     } else {
-      await fetchNovels()
+      fetchNovels(currentPage)
       alert('Deleted')
     }
   }
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
   if (!authorized) {
     return (
@@ -200,9 +222,12 @@ export default function AdminNovelsPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-serif text-primary">📋 Manage Novels</h1>
-          <Link href="/admin/add-novel" className="px-5 py-2 bg-primary text-background rounded-full text-sm hover:bg-primary/90 transition">
-            + Add New Novel
-          </Link>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-foreground/60">Total: {totalCount} published / restricted</span>
+            <Link href="/admin/add-novel" className="px-5 py-2 bg-primary text-background rounded-full text-sm hover:bg-primary/90 transition">
+              + Add New Novel
+            </Link>
+          </div>
         </div>
 
         {message && <p className="mb-4 text-sm text-primary">{message}</p>}
@@ -266,57 +291,82 @@ export default function AdminNovelsPage() {
         ) : novels.length === 0 ? (
           <p className="text-foreground/50">No novels yet. Click "Add New Novel" to upload one.</p>
         ) : (
-          <div className="overflow-x-auto bg-card rounded-2xl shadow-card">
-            <table className="w-full text-left">
-              <thead className="border-b border-border">
-                <tr>
-                  <th className="p-3 text-sm font-medium">Cover</th>
-                  <th className="p-3 text-sm font-medium">Title</th>
-                  <th className="p-3 text-sm font-medium">Author</th>
-                  <th className="p-3 text-sm font-medium">Status</th>
-                  <th className="p-3 text-sm font-medium">Free Ch.</th>
-                  <th className="p-3 text-sm font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {novels.map((novel: any) => (
-                  <tr key={novel.id} className="border-b border-border/50 hover:bg-accent/20">
-                    <td className="p-3">
-                      {novel.cover_url ? (
-                        <img src={novel.cover_url} alt="" className="w-10 h-14 object-cover rounded" />
-                      ) : (
-                        <div className="w-10 h-14 bg-accent rounded" />
-                      )}
-                    </td>
-                    <td className="p-3 font-medium">{novel.title}</td>
-                    <td className="p-3 text-foreground/60">{novel.author}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 text-xs rounded-full ${novel.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                        {novel.status}
-                      </span>
-                    </td>
-                    <td className="p-3">{novel.free_chapters || 3}</td>
-                    <td className="p-3">
-                      <div className="flex gap-2 flex-wrap">
-                        <button onClick={() => startEdit(novel)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition">Edit</button>
-                        <button
-                          onClick={() => toggleStatus(novel)}
-                          className={`text-xs px-3 py-1 rounded-full transition ${
-                            novel.status === 'published'
-                              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200'
-                          }`}
-                        >
-                          {novel.status === 'published' ? '下架' : '上架'}
-                        </button>
-                        <button onClick={() => deleteNovel(novel.id, novel.title)} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full hover:bg-red-200 transition">Delete</button>
-                      </div>
-                    </td>
+          <>
+            <div className="overflow-x-auto bg-card rounded-2xl shadow-card">
+              <table className="w-full text-left">
+                <thead className="border-b border-border">
+                  <tr>
+                    <th className="p-3 text-sm font-medium">Cover</th>
+                    <th className="p-3 text-sm font-medium">Title</th>
+                    <th className="p-3 text-sm font-medium">Author</th>
+                    <th className="p-3 text-sm font-medium">Status</th>
+                    <th className="p-3 text-sm font-medium">Free Ch.</th>
+                    <th className="p-3 text-sm font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {novels.map((novel: any) => (
+                    <tr key={novel.id} className="border-b border-border/50 hover:bg-accent/20">
+                      <td className="p-3">
+                        {novel.cover_url ? (
+                          <img src={novel.cover_url} alt="" className="w-10 h-14 object-cover rounded" />
+                        ) : (
+                          <div className="w-10 h-14 bg-accent rounded" />
+                        )}
+                      </td>
+                      <td className="p-3 font-medium">{novel.title}</td>
+                      <td className="p-3 text-foreground/60">{novel.author}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 text-xs rounded-full ${novel.status === 'published' ? 'bg-green-100 text-green-700' : novel.status === 'restricted' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {novel.status}
+                        </span>
+                      </td>
+                      <td className="p-3">{novel.free_chapters || 3}</td>
+                      <td className="p-3">
+                        <div className="flex gap-2 flex-wrap">
+                          <button onClick={() => startEdit(novel)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition">Edit</button>
+                          {novel.status !== 'restricted' && (
+                            <button
+                              onClick={() => toggleStatus(novel)}
+                              className={`text-xs px-3 py-1 rounded-full transition ${
+                                novel.status === 'published'
+                                  ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              }`}
+                            >
+                              {novel.status === 'published' ? '下架' : '上架'}
+                            </button>
+                          )}
+                          <button onClick={() => deleteNovel(novel.id, novel.title)} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full hover:bg-red-200 transition">Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 分页控件 */}
+            <div className="flex justify-center items-center gap-4 mt-6">
+              <button
+                onClick={() => fetchNovels(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-4 py-2 text-sm border border-border rounded-full disabled:opacity-50 hover:bg-accent transition"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-foreground/60">
+                Page {currentPage} of {totalPages || 1}
+              </span>
+              <button
+                onClick={() => fetchNovels(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="px-4 py-2 text-sm border border-border rounded-full disabled:opacity-50 hover:bg-accent transition"
+              >
+                Next
+              </button>
+            </div>
+          </>
         )}
       </div>
     </main>
