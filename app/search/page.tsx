@@ -37,6 +37,7 @@ function SearchResults() {
         return
       }
 
+      // 合并结果并按 id 去重
       const combined = [...(titleAuthorResults || []), ...(tagResults || [])]
       const unique = combined.filter((novel, index, self) =>
         index === self.findIndex((n) => n.id === novel.id)
@@ -57,17 +58,25 @@ function SearchResults() {
         {query ? `Results for "${query}"` : 'Search'}
       </h1>
 
-      {/* 热门标签 */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {['Romance', 'Mature', 'Werewolf', 'Urban', 'Heiress'].map((term) => (
-          <Link
-            key={term}
-            href={`/search?q=${encodeURIComponent(term)}`}
-            className="text-xs bg-accent text-accent-foreground px-3 py-1.5 rounded-full hover:bg-primary/10 hover:text-primary transition"
-          >
-            {term}
-          </Link>
-        ))}
+      {/* 热门标签：Romance 和 Mature 突出显示 */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        {['Romance', 'Mature', 'Werewolf', 'Urban', 'Heiress'].map((term) => {
+          let extraClass = 'text-xs bg-accent text-accent-foreground'
+          if (term === 'Romance') {
+            extraClass = 'text-lg font-bold text-primary bg-primary/10 border border-primary/30'
+          } else if (term === 'Mature') {
+            extraClass = 'text-lg font-bold text-purple-700 bg-purple-100 border border-purple-300'
+          }
+          return (
+            <Link
+              key={term}
+              href={`/search?q=${encodeURIComponent(term)}`}
+              className={`px-4 py-1.5 rounded-full hover:opacity-80 transition ${extraClass}`}
+            >
+              {term}
+            </Link>
+          )
+        })}
       </div>
 
       {loading ? (
