@@ -20,7 +20,7 @@ function SearchResults() {
       let request = supabase
         .from('novels')
         .select('*')
-        .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
+        .or(`title.ilike.%${query}%,author.ilike.%${query}%,tags.cs.{${query}}`)
         .in('status', ['published', 'restricted'])
 
       const isMatureSearch = query.toLowerCase().includes('mature') || query.toLowerCase().includes('steamy') || query.toLowerCase().includes('sensual')
