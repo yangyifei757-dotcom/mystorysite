@@ -106,6 +106,7 @@ export default function NovelPage() {
   const canReadFirst = firstChapter && firstChapter.order_num <= freeChapters
 
   const tag = Array.isArray(novel.tags) ? novel.tags[0] : novel.tags
+  const isMature = Array.isArray(novel.tags) && novel.tags.includes('Mature')
 
   // 推荐卡片渲染函数（与首页 Recommend 保持一致）
   const renderRecommendationCard = (rec: any) => {
@@ -201,6 +202,13 @@ export default function NovelPage() {
               <span className="inline-block self-start text-sm bg-primary/10 text-primary px-3 py-1 rounded-full">
                 {tag}
               </span>
+            )}
+
+            {/* 成熟内容温和提示 */}
+            {isMature && (
+              <p className="text-sm text-foreground/50 italic mt-3">
+                Contains mature themes. Reader discretion advised.
+              </p>
             )}
 
             {/* Read 按钮 */}
