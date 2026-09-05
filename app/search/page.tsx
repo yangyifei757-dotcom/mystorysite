@@ -60,6 +60,10 @@ function SearchResults() {
 
       {/* 热门标签：Romance 和 Mature 突出显示 */}
       <div className="flex flex-wrap gap-3 mb-6">
+        <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg text-center">
+  <span className="text-sm text-foreground/70">Unlock all stories with a membership.</span>{' '}
+  <Link href="/pricing" className="text-primary font-semibold hover:underline">Subscribe now</Link>
+</div>
         {['Romance', 'Mature', 'Werewolf', 'Urban', 'Heiress'].map((term) => {
           let extraClass = 'text-xs bg-accent text-accent-foreground'
           if (term === 'Romance') {
