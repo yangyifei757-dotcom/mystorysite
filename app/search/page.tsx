@@ -167,10 +167,35 @@ function SearchResults() {
 
 export default function SearchPage() {
   return (
-    <main className="min-h-screen bg-background pt-24 pb-20 px-4">
-      <Suspense fallback={<div className="text-foreground/40">Loading search...</div>}>
-        <SearchResults />
-      </Suspense>
+    <main className="min-h-screen bg-background pb-20">
+      {/* 顶部导航：与首页一致 */}
+      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <Image
+              src="/logo.png"
+              alt="IvyNovel Logo"
+              width={180}
+              height={60}
+              className="h-12 w-auto"
+              priority
+            />
+            <span className="text-2xl font-['Jost'] font-black text-primary tracking-wide">
+              IvyNovel
+            </span>
+          </Link>
+          <Link href="/pricing" className="text-sm font-medium text-foreground/70 hover:text-primary transition">
+            Pricing
+          </Link>
+        </div>
+      </header>
+
+      {/* 主内容区 */}
+      <div className="pt-24 px-4">
+        <Suspense fallback={<div className="text-foreground/40">Loading search...</div>}>
+          <SearchResults />
+        </Suspense>
+      </div>
     </main>
   )
 }
