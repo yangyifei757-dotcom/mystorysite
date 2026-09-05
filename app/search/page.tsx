@@ -11,20 +11,39 @@ function SearchResults() {
   const query = searchParams.get('q') || ''
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [hasSubscription, setHasSubscription] = useState(false)
+
+  // 检查当前用户订阅状态
+  useEffect(() => {
+    const checkSubscription = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('status, current_period_end')
+          .eq('user_id', session.user.id)
+          .order('current_period_end', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (sub && sub.status === 'active' && new Date(sub.current_period_end) > new Date()) {
+          setHasSubscription(true)
+        }
+      }
+    }
+    checkSubscription()
+  }, [])
 
   useEffect(() => {
     if (!query.trim()) return
     setLoading(true)
 
     const fetchResults = async () => {
-      // 标题或作者模糊匹配
       const { data: titleAuthorResults, error: titleAuthorError } = await supabase
         .from('novels')
         .select('*')
         .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
         .in('status', ['published', 'restricted'])
 
-      // 标签精确匹配
       const { data: tagResults, error: tagError } = await supabase
         .from('novels')
         .select('*')
@@ -37,12 +56,10 @@ function SearchResults() {
         return
       }
 
-      // 合并结果并按 id 去重
       const combined = [...(titleAuthorResults || []), ...(tagResults || [])]
       const unique = combined.filter((novel, index, self) =>
         index === self.findIndex((n) => n.id === novel.id)
       )
-
       unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
       setResults(unique.slice(0, 20))
@@ -58,12 +75,8 @@ function SearchResults() {
         {query ? `Results for "${query}"` : 'Search'}
       </h1>
 
-      {/* 热门标签：Romance 和 Mature 突出显示 */}
+      {/* 热门标签 */}
       <div className="flex flex-wrap gap-3 mb-6">
-        <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg text-center">
-  <span className="text-sm text-foreground/70">Unlock all stories with a membership.</span>{' '}
-  <Link href="/pricing" className="text-primary font-semibold hover:underline">Subscribe now</Link>
-</div>
         {['Romance', 'Mature', 'Werewolf', 'Urban', 'Heiress'].map((term) => {
           let extraClass = 'text-xs bg-accent text-accent-foreground'
           if (term === 'Romance') {
@@ -83,14 +96,15 @@ function SearchResults() {
         })}
       </div>
 
+      {/* 搜索状态 */}
       {loading ? (
         <p className="text-foreground/40">Searching...</p>
       ) : results.length === 0 ? (
-  <div className="text-center py-10">
-    <p className="text-foreground/50 mb-2">More stories in this category coming soon. Check back later!</p>
-    <p className="text-sm text-foreground/40">Meanwhile, explore other tags or subscribe for unlimited access to all current stories.</p>
-  </div>
-) : (
+        <div className="text-center py-10">
+          <p className="text-foreground/50 mb-2">More stories in this category coming soon. Check back later!</p>
+          <p className="text-sm text-foreground/40">Meanwhile, explore other tags or subscribe for unlimited access to all current stories.</p>
+        </div>
+      ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {results.map((novel: any) => (
             <Link key={novel.id} href={`/novel/${novel.id}`} className="group flex flex-col">
@@ -113,6 +127,21 @@ function SearchResults() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* 订阅引导横幅（仅未订阅用户可见，放在结果下方） */}
+      {!hasSubscription && !loading && (
+        <div className="mt-8 p-4 bg-gradient-to-r from-primary/10 to-purple-100/50 rounded-xl border border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="text-sm text-foreground/70 text-center sm:text-left">
+            Unlock all stories with a membership.
+          </span>
+          <Link
+            href="/pricing"
+            className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
+          >
+            Subscribe now →
+          </Link>
         </div>
       )}
     </div>
