@@ -19,21 +19,35 @@ function SearchResults() {
     const fetchResults = async () => {
       const isMatureQuery = query.toLowerCase().includes('mature') || query.toLowerCase().includes('steamy') || query.toLowerCase().includes('sensual')
 
-      let request = supabase
+      // 查询标题或作者匹配
+      const { data: titleAuthorResults, error: titleAuthorError } = await supabase
         .from('novels')
         .select('*')
-        .or(`title.ilike.%${query}%,author.ilike.%${query}%,tags.cs.{${query}}`)
-        .in('status', ['published', 'restricted'])
+        .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
+        .in('status', isMatureQuery ? ['published', 'restricted'] : ['published'])
 
-      if (!isMatureQuery) {
-        request = request.eq('status', 'published')
+      // 查询标签包含匹配
+      const { data: tagResults, error: tagError } = await supabase
+        .from('novels')
+        .select('*')
+        .contains('tags', [query])
+        .in('status', isMatureQuery ? ['published', 'restricted'] : ['published'])
+
+      if (titleAuthorError || tagError) {
+        console.error('搜索错误:', titleAuthorError || tagError)
+        setLoading(false)
+        return
       }
 
-      const { data, error } = await request
-        .order('created_at', { ascending: false })
-        .limit(20)
+      // 合并并按 id 去重
+      const combined = [...(titleAuthorResults || []), ...(tagResults || [])]
+      const unique = combined.filter((novel, index, self) =>
+        index === self.findIndex((n) => n.id === novel.id)
+      )
 
-      if (!error && data) setResults(data)
+      unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+      setResults(unique.slice(0, 20))
       setLoading(false)
     }
 
