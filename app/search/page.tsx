@@ -17,15 +17,16 @@ function SearchResults() {
     setLoading(true)
 
     const fetchResults = async () => {
+      const isMatureQuery = query.toLowerCase().includes('mature') || query.toLowerCase().includes('steamy') || query.toLowerCase().includes('sensual')
+
       let request = supabase
         .from('novels')
         .select('*')
         .or(`title.ilike.%${query}%,author.ilike.%${query}%,tags.cs.{${query}}`)
         .in('status', ['published', 'restricted'])
 
-      const isMatureSearch = query.toLowerCase().includes('mature') || query.toLowerCase().includes('steamy') || query.toLowerCase().includes('sensual')
-      if (!isMatureSearch) {
-        request = request.not('tags', 'cs', '{"Mature"}')
+      if (!isMatureQuery) {
+        request = request.eq('status', 'published')
       }
 
       const { data, error } = await request
