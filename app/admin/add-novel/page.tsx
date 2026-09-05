@@ -10,9 +10,10 @@ export default function AddNovelPage() {
     author: '',
     description: '',
     coverUrl: '',
-    tags: 'Romance', // 默认选中 Romance
+    tags: 'Romance',
     content: '',
     payAfterChapter: '3',
+    status: 'published', // 新增状态字段
   })
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
@@ -25,7 +26,6 @@ export default function AddNovelPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      // 限制封面大小不超过 2MB
       if (file.size > 2 * 1024 * 1024) {
         alert('Please upload an image smaller than 2MB.')
         e.target.value = ''
@@ -73,9 +73,10 @@ export default function AddNovelPage() {
           coverBase64,
           coverFileName,
           coverFileType,
-          tags: form.tags, // 单选值
+          tags: form.tags,
           content: form.content,
           payAfterChapter: parseInt(form.payAfterChapter) || 3,
+          status: form.status, // 传递状态
           password: adminPassword,
         }),
       })
@@ -105,7 +106,6 @@ export default function AddNovelPage() {
           <div>
             <label className="block text-sm mb-1 text-foreground/70">Cover Image (max 2MB)</label>
             <input type="file" accept="image/*" onChange={handleFileChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
-            <p className="text-xs text-foreground/50 mt-1">Upload a cover image. If not uploaded, a random image will be used.</p>
           </div>
           <input name="coverUrl" placeholder="Or enter cover image URL (optional)" value={form.coverUrl} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
           <div>
@@ -116,6 +116,15 @@ export default function AddNovelPage() {
               <option value="Werewolf">Werewolf</option>
               <option value="Steamy">Steamy</option>
               <option value="Urban">Urban</option>
+              <option value="Mature">Mature</option> {/* 新增标签选项 */}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm mb-1 text-foreground/70">Status</label>
+            <select name="status" value={form.status} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground">
+              <option value="published">Published (Public)</option>
+              <option value="restricted">Restricted (Hidden from homepage)</option>
+              <option value="draft">Draft</option>
             </select>
           </div>
           <div>
