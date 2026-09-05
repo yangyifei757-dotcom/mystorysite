@@ -38,31 +38,34 @@ function SearchResults() {
     setLoading(true)
 
     const fetchResults = async () => {
-      const { data: titleAuthorResults, error: titleAuthorError } = await supabase
+      // 查询小说，同时获取每本小说的第一章节 ID
+      const { data: novels, error } = await supabase
         .from('novels')
-        .select('*')
+        .select(`
+          *,
+          chapters (id, order_num)
+        `)
         .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
         .in('status', ['published', 'restricted'])
+        .order('created_at', { ascending: false })
+        .limit(20)
 
-      const { data: tagResults, error: tagError } = await supabase
-        .from('novels')
-        .select('*')
-        .contains('tags', [query])
-        .in('status', ['published', 'restricted'])
-
-      if (titleAuthorError || tagError) {
-        console.error('搜索错误:', titleAuthorError || tagError)
+      if (error) {
+        console.error('搜索错误:', error)
         setLoading(false)
         return
       }
 
-      const combined = [...(titleAuthorResults || []), ...(tagResults || [])]
-      const unique = combined.filter((novel, index, self) =>
-        index === self.findIndex((n) => n.id === novel.id)
-      )
-      unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      // 为每部小说找到 order_num 为 1 的章节 ID
+      const processed = (novels || []).map((novel: any) => {
+        const firstChapter = (novel.chapters || []).find((ch: any) => ch.order_num === 1)
+        return {
+          ...novel,
+          firstChapterId: firstChapter?.id || null,
+        }
+      })
 
-      setResults(unique.slice(0, 20))
+      setResults(processed)
       setLoading(false)
     }
 
@@ -134,28 +137,65 @@ function SearchResults() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {results.map((novel: any) => (
-            <Link key={novel.id} href={`/novel/${novel.id}`} className="group flex flex-col">
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-all">
-                {novel.cover_url ? (
-                  <Image
-                    src={novel.cover_url}
-                    alt={novel.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform"
-                    sizes="(max-width: 640px) 50vw, 25vw"
-                  />
-                ) : (
-                  <div className="h-full w-full bg-accent flex items-center justify-center text-4xl text-primary font-serif">{novel.title?.charAt(0)}</div>
-                )}
+        <div className="space-y-3">
+          {results.map((novel: any) => {
+            const tag = Array.isArray(novel.tags) ? novel.tags[0] : novel.tags
+            return (
+              <div
+                key={novel.id}
+                className="flex gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
+              >
+                {/* 左侧封面 */}
+                <Link href={`/novel/${novel.id}`} className="flex-shrink-0">
+                  <div className="relative w-20 h-28 md:w-24 md:h-32 rounded-lg overflow-hidden">
+                    {novel.cover_url ? (
+                      <Image
+                        src={novel.cover_url}
+                        alt={novel.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 80px, 96px"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">
+                        {novel.title?.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+
+                {/* 中间信息 */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  <h3 className="font-['Jost'] font-black text-lg md:text-xl leading-tight text-foreground mb-1">
+                    {novel.title}
+                  </h3>
+                  <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
+                  {tag && (
+                    <span className="inline-block self-start text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mb-2">
+                      {tag}
+                    </span>
+                  )}
+                  <p className="text-sm text-foreground/60 line-clamp-2">
+                    {novel.description}
+                  </p>
+                </div>
+
+                {/* 右侧 Read 按钮 */}
+                <div className="flex items-center">
+                  {novel.firstChapterId ? (
+                    <Link
+                      href={`/read/${novel.firstChapterId}`}
+                      className="inline-block bg-primary text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-primary/90 transition shadow"
+                    >
+                      Read
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-foreground/40">No chapters</span>
+                  )}
+                </div>
               </div>
-              <div className="mt-2 px-1">
-                <h3 className="font-serif text-sm font-medium line-clamp-1">{novel.title}</h3>
-                <p className="text-xs text-foreground/50">{novel.author}</p>
-              </div>
-            </Link>
-          ))}
+            )
+          })}
         </div>
       )}
 
