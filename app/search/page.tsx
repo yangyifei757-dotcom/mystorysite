@@ -17,21 +17,19 @@ function SearchResults() {
     setLoading(true)
 
     const fetchResults = async () => {
-      const isMatureQuery = query.toLowerCase().includes('mature') || query.toLowerCase().includes('steamy') || query.toLowerCase().includes('sensual')
-
-      // 查询标题或作者匹配
+      // 标题或作者模糊匹配
       const { data: titleAuthorResults, error: titleAuthorError } = await supabase
         .from('novels')
         .select('*')
         .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
-        .in('status', isMatureQuery ? ['published', 'restricted'] : ['published'])
+        .in('status', ['published', 'restricted'])
 
-      // 查询标签包含匹配
+      // 标签精确匹配
       const { data: tagResults, error: tagError } = await supabase
         .from('novels')
         .select('*')
         .contains('tags', [query])
-        .in('status', isMatureQuery ? ['published', 'restricted'] : ['published'])
+        .in('status', ['published', 'restricted'])
 
       if (titleAuthorError || tagError) {
         console.error('搜索错误:', titleAuthorError || tagError)
@@ -39,7 +37,6 @@ function SearchResults() {
         return
       }
 
-      // 合并并按 id 去重
       const combined = [...(titleAuthorResults || []), ...(tagResults || [])]
       const unique = combined.filter((novel, index, self) =>
         index === self.findIndex((n) => n.id === novel.id)
