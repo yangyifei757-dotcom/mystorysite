@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const {
       title, author, description, coverUrl,
       coverBase64, coverFileName, coverFileType,
-      tags, content, payAfterChapter, password
+      tags, content, payAfterChapter, password, status
     } = body
 
     if (password !== UPLOAD_PASSWORD) {
@@ -53,7 +53,9 @@ export async function POST(request: Request) {
       finalCoverUrl = urlData.publicUrl
     }
 
-    // 重要：插入小说时写入 free_chapters
+    // 重要：允许设置 status，若为 restricted 则不上首页
+    const finalStatus = status || 'published'
+
     const { data: novel, error: novelError } = await supabaseAdmin
       .from('novels')
       .insert({
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
         description: description || '',
         cover_url: finalCoverUrl,
         tags: tags ? tags.split(',').map((t: string) => t.trim()) : [],
-        status: 'published',
+        status: finalStatus,
         free_chapters: payAfterChapter || 3,
       })
       .select('id')
