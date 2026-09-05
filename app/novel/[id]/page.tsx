@@ -55,6 +55,7 @@ export default function NovelPage() {
             .select('*')
             .eq('status', 'published')
             .neq('id', id)
+            .not('tags', 'cs', '{"Mature"}') // 排除 Mature 标签
             .overlaps('tags', tags)
             .limit(6)
 
@@ -68,6 +69,7 @@ export default function NovelPage() {
             .select('*')
             .eq('status', 'published')
             .neq('id', id)
+            .not('tags', 'cs', '{"Mature"}') // 排除 Mature 标签
             .not('id', 'in', `(${existingIds.join(',')})`)
             .order('created_at', { ascending: false })
             .limit(6 - recommendationsData.length)
@@ -166,7 +168,7 @@ export default function NovelPage() {
         </div>
       </header>
 
-      {/* 主内容区，添加顶部内边距避免被固定 header 遮挡 */}
+      {/* 主内容区 */}
       <div className="max-w-4xl mx-auto px-4 pt-24">
         {/* 封面 + 基础信息 */}
         <div className="flex flex-col md:flex-row gap-6 md:gap-10 mb-8 mt-4">
@@ -274,7 +276,7 @@ export default function NovelPage() {
           </div>
         )}
 
-        {/* 推荐区域：小封面左右布局，与首页 Recommend 相同 */}
+        {/* 推荐区域：小封面左右布局，与首页 Recommend 相同，已排除 Mature */}
         {recommendations.length > 0 && (
           <div className="mt-16">
             <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground mb-6">You May Also Like</h2>
