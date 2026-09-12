@@ -13,7 +13,6 @@ const BG_STYLES = {
   dark: 'bg-[#1E1B1A] text-[#D4C5B9]',
 }
 
-// 前 3 章无需登录即可阅读
 const FREE_PREVIEW_CHAPTERS = 3
 
 function formatChapterTitle(orderNum: number, title: string | null | undefined) {
@@ -44,7 +43,6 @@ export default function ReadPage() {
   const [nextOrderNum, setNextOrderNum] = useState<number | null>(null)
   const [freeChapters, setFreeChapters] = useState(3)
   const [showPaywall, setShowPaywall] = useState(false)
-  // 新增：登录引导
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
 
   const loadingMoreRef = useRef(false)
@@ -86,6 +84,10 @@ export default function ReadPage() {
       const free = chapterData.novel?.free_chapters || 3
       setFreeChapters(free)
 
+      // 记住最后阅读的章节，用于登录后恢复
+      localStorage.setItem('last_read_chapter', chapterId)
+      localStorage.setItem('last_read_novel', chapterData.novel.id)
+
       const { data: chaptersList } = await supabase
         .from('chapters')
         .select('id, title, is_locked, order_num')
@@ -123,9 +125,9 @@ export default function ReadPage() {
       }
       setHasSubscription(subscribed)
 
-      // 关键：前 3 章无需登录，第 4 章起需登录
-      if (chapterData.order_num > FREE_PREVIEW_CHAPTERS && !user) {
-        // 显示登录引导卡片，而不是直接跳转，用户可以选择登录或返回
+      // 未登录预览限制：取 FREE_PREVIEW_CHAPTERS 和 free 的较小值
+      const previewLimit = Math.min(FREE_PREVIEW_CHAPTERS, free)
+      if (!user && chapterData.order_num > previewLimit) {
         if (isMounted) {
           setCanRead(true)
           setLoadedChapters([chapterData])
@@ -136,25 +138,21 @@ export default function ReadPage() {
       }
 
       const isFreeChapter = chapterData.order_num <= free
-      if (isFreeChapter) {
+      if (isFreeChapter || subscribed) {
         setCanRead(true)
         setLoadedChapters([chapterData])
         setNextOrderNum(chapterData.order_num + 1)
-        if (chapterData.order_num === free && !subscribed) {
+        if (chapterData.order_num === free && !subscribed && free < 999) {
           setShowPaywall(true)
         }
       } else {
-        if (!user) {
-          router.push(`/login?redirect=/read/${chapterId}`)
-          return
-        }
-        if (!subscribed) {
-          router.push('/pricing?message=Subscribe to unlock this chapter')
-          return
-        }
+        // 已登录但未订阅，且当前章节为付费章节
         setCanRead(true)
         setLoadedChapters([chapterData])
         setNextOrderNum(chapterData.order_num + 1)
+        if (free < 999) {
+          setShowPaywall(true)
+        }
       }
 
       setLoading(false)
@@ -169,7 +167,7 @@ export default function ReadPage() {
 
   const loadNextChapter = async () => {
     if (loadingMoreRef.current) return
-    if (showLoginPrompt) return // 登录引导显示时不自动加载
+    if (showLoginPrompt) return
     if (!nextOrderNum || !novel?.id || allChapters.length === 0) return
 
     const maxOrder = Math.max(...allChapters.map((ch: any) => ch.order_num))
@@ -178,14 +176,14 @@ export default function ReadPage() {
     const next = allChapters.find((ch: any) => ch.order_num === nextOrderNum)
     if (!next) return
 
-    // 下一章超过 3 章且未登录，显示登录引导
-    if (next.order_num > FREE_PREVIEW_CHAPTERS && !currentUser) {
+    const previewLimit = Math.min(FREE_PREVIEW_CHAPTERS, freeChapters)
+    if (!currentUser && next.order_num > previewLimit) {
       setShowLoginPrompt(true)
       return
     }
 
     const isFreeNext = next.order_num <= freeChapters
-    if (!isFreeNext && !hasSubscription) {
+    if (!isFreeNext && !hasSubscription && currentUser) {
       setShowPaywall(true)
       return
     }
@@ -210,6 +208,7 @@ export default function ReadPage() {
           progress: 0,
           updated_at: new Date().toISOString(),
         })
+        localStorage.setItem('last_read_chapter', data.id)
       }
     }
 
@@ -246,12 +245,11 @@ export default function ReadPage() {
   }
 
   const canAccessChapter = (ch: any) => {
-    const isFree = ch.order_num <= freeChapters
-    // 未登录用户只能访问前 3 章
-    if (!currentUser && ch.order_num > FREE_PREVIEW_CHAPTERS) {
+    const previewLimit = Math.min(FREE_PREVIEW_CHAPTERS, freeChapters)
+    if (!currentUser && ch.order_num > previewLimit) {
       return false
     }
-    return isFree || hasSubscription
+    return ch.order_num <= freeChapters || hasSubscription
   }
 
   if (loading) {
@@ -267,16 +265,13 @@ export default function ReadPage() {
   const currentLastOrder = loadedChapters.length > 0 ? loadedChapters[loadedChapters.length - 1].order_num : chapter.order_num
   const maxOrder = allChapters.length > 0 ? Math.max(...allChapters.map((ch: any) => ch.order_num)) : 0
 
-  // 判断是否为免费作品
   const isFreeBook = freeChapters >= 999
-  // 是否为最后一章
   const isLastChapter = currentLastOrder === maxOrder
-  // 免费作品读完后的引导卡片（仅登录用户看到）
   const showFreeEndCard = isFreeBook && isLastChapter && !hasSubscription && currentUser
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
-      {/* 顶部工具栏：Logo + 网站名，点击回首页 */}
+      {/* 顶部工具栏 */}
       <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-sm border-b border-border/50 px-4 py-2 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
           <Image
@@ -331,7 +326,7 @@ export default function ReadPage() {
           <div className="mt-8 text-center text-foreground/40 text-sm">Loading next chapter...</div>
         )}
 
-        {/* 登录引导卡片（第 4 章起未登录时显示） */}
+        {/* 登录引导卡片 */}
         {showLoginPrompt && !currentUser && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#EEF4FF] to-[#DDE8FF] border border-blue-200 shadow-lg text-center">
             <div className="text-3xl mb-3">📖</div>
@@ -351,7 +346,7 @@ export default function ReadPage() {
           </div>
         )}
 
-        {/* 付费墙卡片（付费作品） */}
+        {/* 付费墙卡片 */}
         {showPaywall && !hasSubscription && !isFreeBook && currentUser && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
@@ -368,7 +363,7 @@ export default function ReadPage() {
           </div>
         )}
 
-        {/* 免费作品读完后的温和引导卡片 */}
+        {/* 免费作品读完后的引导卡片 */}
         {showFreeEndCard && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#F5F0FF] to-[#EBE0FF] border border-purple-200 shadow-lg text-center">
             <div className="text-3xl mb-3">📚</div>
@@ -403,11 +398,12 @@ export default function ReadPage() {
           onClick={() => {
             if (currentLastOrder < maxOrder) {
               const next = allChapters.find((ch: any) => ch.order_num === currentLastOrder + 1)
-              if (!currentUser && next && next.order_num > FREE_PREVIEW_CHAPTERS) {
+              const previewLimit = Math.min(FREE_PREVIEW_CHAPTERS, freeChapters)
+              if (!currentUser && next && next.order_num > previewLimit) {
                 setShowLoginPrompt(true)
                 return
               }
-              if (next && next.order_num > freeChapters && !hasSubscription && currentUser) {
+              if (next && next.order_num > freeChapters && !hasSubscription && currentUser && freeChapters < 999) {
                 router.push('/pricing')
               } else {
                 goToChapter(currentLastOrder + 1)
@@ -431,11 +427,11 @@ export default function ReadPage() {
             </div>
             <div className="space-y-2">
               {allChapters.map((ch: any) => {
+                const previewLimit = Math.min(FREE_PREVIEW_CHAPTERS, freeChapters)
                 const isFree = ch.order_num <= freeChapters
                 const isCurrent = ch.id === chapterId
                 const canAccess = canAccessChapter(ch)
-                // 未登录用户超过前 3 章的显示为需要登录
-                const requiresLogin = !currentUser && ch.order_num > FREE_PREVIEW_CHAPTERS
+                const requiresLogin = !currentUser && ch.order_num > previewLimit
                 return (
                   <div
                     key={ch.id}
