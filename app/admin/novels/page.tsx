@@ -354,6 +354,12 @@ export default function AdminNovelsPage() {
                         <td className="p-3">
                           <div className="flex gap-2 flex-wrap">
                             <button onClick={() => startEdit(novel)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition">Edit</button>
+                            <Link
+                              href={`/admin/novels/${novel.id}/chapters`}
+                              className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition"
+                            >
+                              Chapters
+                            </Link>
                             {novel.status !== 'restricted' && (
                               <button
                                 onClick={() => toggleStatus(novel)}
