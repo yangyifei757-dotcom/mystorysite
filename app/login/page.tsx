@@ -99,6 +99,9 @@ function LoginForm() {
             </svg>
             Continue with Google
           </button>
+          <p className="text-xs text-foreground/40 text-center mt-1">
+  You'll be briefly redirected to our secure login provider.
+</p>
         </div>
 
         <div className="relative">
