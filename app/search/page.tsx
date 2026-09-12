@@ -13,7 +13,6 @@ function SearchResults() {
   const [loading, setLoading] = useState(false)
   const [hasSubscription, setHasSubscription] = useState(false)
 
-  // 检查订阅状态
   useEffect(() => {
     const checkSubscription = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -38,46 +37,32 @@ function SearchResults() {
     setLoading(true)
 
     const fetchResults = async () => {
-      // 同时匹配标题、作者和标签
-      // 使用 .or 和 .overlaps 更可靠
-      let request = supabase
-        .from('novels')
-        .select(`
-          *,
-          chapters (id, order_num)
-        `)
-        .or(`title.ilike.%${query}%,author.ilike.%${query}%,tags.cs.{${query}}`)
-        .in('status', ['published', 'restricted'])
-        .order('created_at', { ascending: false })
-        .limit(20)
+      let request
+
+      if (query.toLowerCase() === 'free') {
+        // 搜索完全免费作品
+        request = supabase
+          .from('novels')
+          .select(`*, chapters (id, order_num)`)
+          .gte('free_chapters', 999)
+          .eq('status', 'published')
+          .order('created_at', { ascending: false })
+          .limit(20)
+      } else {
+        // 原有逻辑
+        request = supabase
+          .from('novels')
+          .select(`*, chapters (id, order_num)`)
+          .or(`title.ilike.%${query}%,author.ilike.%${query}%,tags.cs.{${query}}`)
+          .in('status', ['published', 'restricted'])
+          .order('created_at', { ascending: false })
+          .limit(20)
+      }
 
       const { data: novels, error } = await request
 
       if (error) {
         console.error('搜索错误:', error)
-        // 如果 .cs 语法出错，回退到简单标题搜索
-        const fallback = await supabase
-          .from('novels')
-          .select(`
-            *,
-            chapters (id, order_num)
-          `)
-          .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
-          .in('status', ['published', 'restricted'])
-          .order('created_at', { ascending: false })
-          .limit(20)
-
-        if (fallback.error) {
-          console.error('回退搜索也失败:', fallback.error)
-          setLoading(false)
-          return
-        }
-
-        const processed = (fallback.data || []).map((novel: any) => {
-          const firstChapter = (novel.chapters || []).find((ch: any) => ch.order_num === 1)
-          return { ...novel, firstChapterId: firstChapter?.id || null }
-        })
-        setResults(processed)
         setLoading(false)
         return
       }
@@ -96,7 +81,6 @@ function SearchResults() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* 搜索词标题 */}
       {query && (
         <h1 className="text-2xl font-serif text-foreground mb-6">
           Results for “{query}”
@@ -126,12 +110,14 @@ function SearchResults() {
 
       {/* 热门标签 */}
       <div className="flex flex-wrap gap-3 mb-6">
-        {['Romance', 'Mature', 'Werewolf', 'Urban', 'Heiress'].map((term) => {
+        {['Romance', 'Mature', 'Werewolf', 'Urban', 'Heiress', 'Free'].map((term) => {
           let extraClass = 'text-xs bg-accent text-accent-foreground'
           if (term === 'Romance') {
             extraClass = 'text-lg font-bold text-primary bg-primary/10 border border-primary/30'
           } else if (term === 'Mature') {
             extraClass = 'text-lg font-bold text-purple-700 bg-purple-100 border border-purple-300'
+          } else if (term === 'Free') {
+            extraClass = 'text-lg font-bold text-green-700 bg-green-100 border border-green-300'
           }
           return (
             <Link
@@ -145,7 +131,7 @@ function SearchResults() {
         })}
       </div>
 
-      {/* 搜索状态 */}
+      {/* 搜索结果 */}
       {loading ? (
         <p className="text-foreground/40">Searching...</p>
       ) : results.length === 0 ? (
@@ -155,60 +141,41 @@ function SearchResults() {
           <div className="flex flex-wrap justify-center gap-2">
             <Link href="/search?q=Romance" className="text-xs bg-accent text-accent-foreground px-3 py-1 rounded-full hover:bg-primary/10 hover:text-primary transition">Romance</Link>
             <Link href="/search?q=Mature" className="text-xs bg-accent text-accent-foreground px-3 py-1 rounded-full hover:bg-primary/10 hover:text-primary transition">Mature</Link>
-            <Link href="/search?q=Werewolf" className="text-xs bg-accent text-accent-foreground px-3 py-1 rounded-full hover:bg-primary/10 hover:text-primary transition">Werewolf</Link>
+            <Link href="/search?q=Free" className="text-xs bg-accent text-accent-foreground px-3 py-1 rounded-full hover:bg-primary/10 hover:text-primary transition">Free</Link>
           </div>
         </div>
       ) : (
         <div className="space-y-3">
           {results.map((novel: any) => {
             const tag = Array.isArray(novel.tags) ? novel.tags[0] : novel.tags
+            const isFreeBook = novel.free_chapters >= 999
             return (
-              <div
-                key={novel.id}
-                className="flex gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
-              >
-                {/* 左侧封面 */}
+              <div key={novel.id} className="flex gap-4 p-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300">
                 <Link href={`/novel/${novel.id}`} className="flex-shrink-0">
                   <div className="relative w-20 h-28 md:w-24 md:h-32 rounded-lg overflow-hidden">
                     {novel.cover_url ? (
-                      <Image
-                        src={novel.cover_url}
-                        alt={novel.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 80px, 96px"
-                      />
+                      <Image src={novel.cover_url} alt={novel.title} fill className="object-cover" sizes="(max-width: 640px) 80px, 96px" />
                     ) : (
-                      <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">
-                        {novel.title?.charAt(0)}
-                      </div>
+                      <div className="h-full w-full bg-accent flex items-center justify-center text-2xl text-primary font-serif">{novel.title?.charAt(0)}</div>
                     )}
                   </div>
                 </Link>
-
-                {/* 中间信息 */}
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <h3 className="font-['Jost'] font-black text-lg md:text-xl leading-tight text-foreground mb-1">
-                    {novel.title}
-                  </h3>
+                  <h3 className="font-['Jost'] font-black text-lg md:text-xl leading-tight text-foreground mb-1">{novel.title}</h3>
                   <p className="text-xs text-foreground/50 mb-1">by {novel.author}</p>
-                  {tag && (
-                    <span className="inline-block self-start text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mb-2">
-                      {tag}
-                    </span>
-                  )}
-                  <p className="text-sm text-foreground/60 line-clamp-2">
-                    {novel.description}
-                  </p>
+                  <div className="flex gap-2 mb-2">
+                    {tag && (
+                      <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">{tag}</span>
+                    )}
+                    {isFreeBook && (
+                      <span className="inline-block text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Free</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-foreground/60 line-clamp-2">{novel.description}</p>
                 </div>
-
-                {/* 右侧 Read 按钮 */}
                 <div className="flex items-center">
                   {novel.firstChapterId ? (
-                    <Link
-                      href={`/read/${novel.firstChapterId}`}
-                      className="inline-block bg-primary text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-primary/90 transition shadow"
-                    >
+                    <Link href={`/read/${novel.firstChapterId}`} className="inline-block bg-primary text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-primary/90 transition shadow">
                       Read
                     </Link>
                   ) : (
@@ -221,16 +188,12 @@ function SearchResults() {
         </div>
       )}
 
-      {/* 订阅引导横幅（仅未订阅用户，结果下方） */}
       {!hasSubscription && !loading && (
         <div className="mt-8 p-4 bg-gradient-to-r from-primary/10 to-purple-100/50 rounded-xl border border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-sm text-foreground/70 text-center sm:text-left">
             Unlock all stories with a membership.
           </span>
-          <Link
-            href="/pricing"
-            className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
-          >
+          <Link href="/pricing" className="text-sm font-bold text-primary hover:underline whitespace-nowrap">
             Subscribe now →
           </Link>
         </div>
@@ -242,29 +205,15 @@ function SearchResults() {
 export default function SearchPage() {
   return (
     <main className="min-h-screen bg-background pb-20">
-      {/* 顶部导航：与首页一致 */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="IvyNovel Logo"
-              width={180}
-              height={60}
-              className="h-12 w-auto"
-              priority
-            />
-            <span className="text-2xl font-['Jost'] font-black text-primary tracking-wide">
-              IvyNovel
-            </span>
+            <Image src="/logo.png" alt="IvyNovel Logo" width={180} height={60} className="h-12 w-auto" priority />
+            <span className="text-2xl font-['Jost'] font-black text-primary tracking-wide">IvyNovel</span>
           </Link>
-          <Link href="/pricing" className="text-sm font-medium text-foreground/70 hover:text-primary transition">
-            Pricing
-          </Link>
+          <Link href="/pricing" className="text-sm font-medium text-foreground/70 hover:text-primary transition">Pricing</Link>
         </div>
       </header>
-
-      {/* 主内容区 */}
       <div className="pt-24 px-4">
         <Suspense fallback={<div className="text-foreground/40">Loading search...</div>}>
           <SearchResults />
