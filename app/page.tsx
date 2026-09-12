@@ -48,10 +48,12 @@ export default function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
+      // 首页排除完全免费的作品（free_chapters >= 999）
       const { data } = await supabase
         .from('novels')
         .select('*')
         .eq('status', 'published')
+        .lt('free_chapters', 999)
         .order('created_at', { ascending: false })
       setNovels(data || [])
 
@@ -209,45 +211,45 @@ export default function Home() {
     <main className="min-h-screen bg-background pb-20">
       {/* 顶部导航 */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
-  <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-    <div className="flex items-center gap-6">
-      <Link href="/" className="flex items-center gap-3">
-        <Image
-          src="/logo.png"
-          alt="IvyNovel Logo"
-          width={180}
-          height={60}
-          className="h-12 w-auto"
-          priority
-        />
-        <span className="text-2xl font-['Jost'] font-black text-primary tracking-wide">
-          IvyNovel
-        </span>
-      </Link>
-    </div>
-    <div className="flex items-center gap-4">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          const q = (e.target as any).q.value
-          if (q.trim()) window.location.href = `/search?q=${encodeURIComponent(q.trim())}`
-        }}
-        className="relative"
-      >
-        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-foreground/40">🔍</span>
-        <input
-          type="text"
-          name="q"
-          placeholder="Search..."
-          className="pl-9 pr-3 py-1.5 rounded-full border border-border bg-white text-foreground text-sm w-32 md:w-48 focus:outline-none focus:border-primary transition"
-        />
-      </form>
-      <Link href="/pricing" className="text-sm font-medium text-foreground/70 hover:text-primary transition">
-        Pricing
-      </Link>
-    </div>
-  </div>
-</header>
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-3">
+              <Image
+                src="/logo.png"
+                alt="IvyNovel Logo"
+                width={180}
+                height={60}
+                className="h-12 w-auto"
+                priority
+              />
+              <span className="text-2xl font-['Jost'] font-black text-primary tracking-wide">
+                IvyNovel
+              </span>
+            </Link>
+          </div>
+          <div className="flex items-center gap-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const q = (e.target as any).q.value
+                if (q.trim()) window.location.href = `/search?q=${encodeURIComponent(q.trim())}`
+              }}
+              className="relative"
+            >
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-foreground/40">🔍</span>
+              <input
+                type="text"
+                name="q"
+                placeholder="Search..."
+                className="pl-9 pr-3 py-1.5 rounded-full border border-border bg-white text-foreground text-sm w-32 md:w-48 focus:outline-none focus:border-primary transition"
+              />
+            </form>
+            <Link href="/pricing" className="text-sm font-medium text-foreground/70 hover:text-primary transition">
+              Pricing
+            </Link>
+          </div>
+        </div>
+      </header>
 
       {/* Hero Banner */}
       <section className="pt-20 pb-8 px-4">
@@ -338,24 +340,26 @@ export default function Home() {
         </form>
 
         {/* 热门标签 */}
-        <div className="flex flex-wrap justify-center gap-2 mt-4">
-          {['Romance', 'Mature', 'Werewolf', 'Urban', 'Heiress'].map((term) => {
-  let extraClass = 'text-xs bg-accent text-accent-foreground'
-  if (term === 'Romance') {
-    extraClass = 'text-lg font-bold text-primary bg-primary/10 border border-primary/30'
-  } else if (term === 'Mature') {
-    extraClass = 'text-lg font-bold text-purple-700 bg-purple-100 border border-purple-300'
-  }
-  return (
-    <Link
-      key={term}
-      href={`/search?q=${encodeURIComponent(term)}`}
-      className={`px-4 py-1.5 rounded-full hover:opacity-80 transition ${extraClass}`}
-    >
-      {term}
-    </Link>
-  )
-})}
+        <div className="flex flex-wrap justify-center gap-3 mt-4">
+          {['Romance', 'Mature', 'Werewolf', 'Urban', 'Heiress', 'Free'].map((term) => {
+            let extraClass = 'text-xs bg-accent text-accent-foreground'
+            if (term === 'Romance') {
+              extraClass = 'text-lg font-bold text-primary bg-primary/10 border border-primary/30'
+            } else if (term === 'Mature') {
+              extraClass = 'text-lg font-bold text-purple-700 bg-purple-100 border border-purple-300'
+            } else if (term === 'Free') {
+              extraClass = 'text-lg font-bold text-green-700 bg-green-100 border border-green-300'
+            }
+            return (
+              <Link
+                key={term}
+                href={`/search?q=${encodeURIComponent(term)}`}
+                className={`px-4 py-1.5 rounded-full hover:opacity-80 transition ${extraClass}`}
+              >
+                {term}
+              </Link>
+            )
+          })}
         </div>
       </div>
 
