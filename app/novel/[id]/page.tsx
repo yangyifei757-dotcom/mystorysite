@@ -55,7 +55,8 @@ export default function NovelPage() {
             .select('*')
             .eq('status', 'published')
             .neq('id', id)
-            .not('tags', 'cs', '{"Mature"}') // 排除 Mature 标签
+            .not('tags', 'cs', '{"Mature"}')
+            .lt('free_chapters', 999) // 排除完全免费作品
             .overlaps('tags', tags)
             .limit(6)
 
@@ -69,7 +70,8 @@ export default function NovelPage() {
             .select('*')
             .eq('status', 'published')
             .neq('id', id)
-            .not('tags', 'cs', '{"Mature"}') // 排除 Mature 标签
+            .not('tags', 'cs', '{"Mature"}')
+            .lt('free_chapters', 999) // 排除完全免费作品
             .not('id', 'in', `(${existingIds.join(',')})`)
             .order('created_at', { ascending: false })
             .limit(6 - recommendationsData.length)
@@ -99,16 +101,16 @@ export default function NovelPage() {
   }
 
   const freeChapters = novel.free_chapters || 3
+  const isFreeBook = freeChapters >= 999
   const firstChapter = chapters.find(ch => ch.order_num === 1)
   const nextChapter = chapters.find(ch => ch.order_num === 2) || chapters.find(ch => ch.order_num > 1)
 
-  const showFirstChapter = firstChapter && firstChapter.order_num <= freeChapters
-  const canReadFirst = firstChapter && firstChapter.order_num <= freeChapters
+  const showFirstChapter = firstChapter && (isFreeBook || firstChapter.order_num <= freeChapters)
+  const canReadFirst = firstChapter && (isFreeBook || firstChapter.order_num <= freeChapters)
 
   const tag = Array.isArray(novel.tags) ? novel.tags[0] : novel.tags
   const isMature = Array.isArray(novel.tags) && novel.tags.includes('Mature')
 
-  // 推荐卡片渲染函数（与首页 Recommend 保持一致）
   const renderRecommendationCard = (rec: any) => {
     const recTag = Array.isArray(rec.tags) ? rec.tags[0] : rec.tags
     return (
@@ -156,7 +158,7 @@ export default function NovelPage() {
 
   return (
     <main className="min-h-screen bg-background pb-16">
-      {/* 顶部：与首页一致的固定导航，Logo 左对齐 */}
+      {/* 顶部：与首页一致的固定导航 */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
@@ -169,11 +171,9 @@ export default function NovelPage() {
         </div>
       </header>
 
-      {/* 主内容区 */}
       <div className="max-w-4xl mx-auto px-4 pt-24">
         {/* 封面 + 基础信息 */}
         <div className="flex flex-col md:flex-row gap-6 md:gap-10 mb-8 mt-4">
-          {/* 封面 */}
           <div className="w-full md:w-1/3 flex-shrink-0 mx-auto md:mx-0">
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-card max-w-[260px] md:max-w-none mx-auto">
               {novel.cover_url ? (
@@ -192,26 +192,31 @@ export default function NovelPage() {
             </div>
           </div>
 
-          {/* 右侧信息 */}
           <div className="flex-1 flex flex-col justify-start md:justify-start md:pt-2">
             <h1 className="text-3xl md:text-4xl font-['Jost'] font-black text-foreground leading-tight mb-3">
               {novel.title}
             </h1>
             <p className="text-lg text-foreground/60 mb-4">by {novel.author}</p>
-            {tag && (
-              <span className="inline-block self-start text-sm bg-primary/10 text-primary px-3 py-1 rounded-full">
-                {tag}
-              </span>
-            )}
 
-            {/* 成熟内容温和提示 */}
+            <div className="flex flex-wrap gap-2">
+              {tag && (
+                <span className="inline-block text-sm bg-primary/10 text-primary px-3 py-1 rounded-full">
+                  {tag}
+                </span>
+              )}
+              {isFreeBook && (
+                <span className="inline-block text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">
+                  Free — Read All Chapters
+                </span>
+              )}
+            </div>
+
             {isMature && (
               <p className="text-sm text-foreground/50 italic mt-3">
                 Contains mature themes. Reader discretion advised.
               </p>
             )}
 
-            {/* Read 按钮 */}
             <div className="mt-6">
               {canReadFirst && firstChapter ? (
                 <Link
@@ -219,7 +224,7 @@ export default function NovelPage() {
                   className="inline-block bg-primary text-white px-10 py-3 rounded-full text-lg font-bold hover:bg-primary/90 transition shadow-lg"
                   onClick={() => track('click_read_first_chapter', { novel_id: id })}
                 >
-                  Read
+                  {isFreeBook ? 'Read for Free' : 'Read'}
                 </Link>
               ) : (
                 <Link
@@ -234,7 +239,7 @@ export default function NovelPage() {
           </div>
         </div>
 
-        {/* Synopsis 区域，可折叠 */}
+        {/* Synopsis 区域 */}
         <div className="mb-8">
           <h2 className="text-xl font-['Jost'] font-black text-foreground mb-2">Synopsis</h2>
           <p className={`text-foreground/70 leading-relaxed ${!showFullSynopsis ? 'line-clamp-3' : ''}`}>
@@ -284,7 +289,7 @@ export default function NovelPage() {
           </div>
         )}
 
-        {/* 推荐区域：小封面左右布局，与首页 Recommend 相同，已排除 Mature */}
+        {/* 推荐区域 */}
         {recommendations.length > 0 && (
           <div className="mt-16">
             <h2 className="text-2xl md:text-3xl font-['Jost'] font-black text-foreground mb-6">You May Also Like</h2>
