@@ -13,6 +13,9 @@ const BG_STYLES = {
   dark: 'bg-[#1E1B1A] text-[#D4C5B9]',
 }
 
+// 前 3 章无需登录即可阅读
+const FREE_PREVIEW_CHAPTERS = 3
+
 function formatChapterTitle(orderNum: number, title: string | null | undefined) {
   const defaultTitle = `Chapter ${orderNum}`
   if (!title || title === defaultTitle || title.trim() === `Chapter ${orderNum}`) {
@@ -41,6 +44,8 @@ export default function ReadPage() {
   const [nextOrderNum, setNextOrderNum] = useState<number | null>(null)
   const [freeChapters, setFreeChapters] = useState(3)
   const [showPaywall, setShowPaywall] = useState(false)
+  // 新增：登录引导
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
 
   const loadingMoreRef = useRef(false)
 
@@ -118,6 +123,18 @@ export default function ReadPage() {
       }
       setHasSubscription(subscribed)
 
+      // 关键：前 3 章无需登录，第 4 章起需登录
+      if (chapterData.order_num > FREE_PREVIEW_CHAPTERS && !user) {
+        // 显示登录引导卡片，而不是直接跳转，用户可以选择登录或返回
+        if (isMounted) {
+          setCanRead(true)
+          setLoadedChapters([chapterData])
+          setShowLoginPrompt(true)
+          setLoading(false)
+        }
+        return
+      }
+
       const isFreeChapter = chapterData.order_num <= free
       if (isFreeChapter) {
         setCanRead(true)
@@ -152,6 +169,7 @@ export default function ReadPage() {
 
   const loadNextChapter = async () => {
     if (loadingMoreRef.current) return
+    if (showLoginPrompt) return // 登录引导显示时不自动加载
     if (!nextOrderNum || !novel?.id || allChapters.length === 0) return
 
     const maxOrder = Math.max(...allChapters.map((ch: any) => ch.order_num))
@@ -159,6 +177,12 @@ export default function ReadPage() {
 
     const next = allChapters.find((ch: any) => ch.order_num === nextOrderNum)
     if (!next) return
+
+    // 下一章超过 3 章且未登录，显示登录引导
+    if (next.order_num > FREE_PREVIEW_CHAPTERS && !currentUser) {
+      setShowLoginPrompt(true)
+      return
+    }
 
     const isFreeNext = next.order_num <= freeChapters
     if (!isFreeNext && !hasSubscription) {
@@ -204,7 +228,7 @@ export default function ReadPage() {
     }
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [nextOrderNum, hasSubscription, allChapters, loadingMore, currentUser, novel, showPaywall, freeChapters])
+  }, [nextOrderNum, hasSubscription, allChapters, loadingMore, currentUser, novel, showPaywall, freeChapters, showLoginPrompt])
 
   const goToChapter = async (orderNum: number) => {
     if (!novel?.id) return
@@ -223,6 +247,10 @@ export default function ReadPage() {
 
   const canAccessChapter = (ch: any) => {
     const isFree = ch.order_num <= freeChapters
+    // 未登录用户只能访问前 3 章
+    if (!currentUser && ch.order_num > FREE_PREVIEW_CHAPTERS) {
+      return false
+    }
     return isFree || hasSubscription
   }
 
@@ -243,8 +271,8 @@ export default function ReadPage() {
   const isFreeBook = freeChapters >= 999
   // 是否为最后一章
   const isLastChapter = currentLastOrder === maxOrder
-  // 免费作品读完后的引导卡片
-  const showFreeEndCard = isFreeBook && isLastChapter && !hasSubscription
+  // 免费作品读完后的引导卡片（仅登录用户看到）
+  const showFreeEndCard = isFreeBook && isLastChapter && !hasSubscription && currentUser
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
@@ -303,8 +331,28 @@ export default function ReadPage() {
           <div className="mt-8 text-center text-foreground/40 text-sm">Loading next chapter...</div>
         )}
 
-        {/* 付费作品的付费墙卡片 */}
-        {showPaywall && !hasSubscription && !isFreeBook && (
+        {/* 登录引导卡片（第 4 章起未登录时显示） */}
+        {showLoginPrompt && !currentUser && (
+          <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#EEF4FF] to-[#DDE8FF] border border-blue-200 shadow-lg text-center">
+            <div className="text-3xl mb-3">📖</div>
+            <h3 className="text-xl font-serif text-foreground mb-2">Continue Reading</h3>
+            <p className="text-foreground/60 text-sm mb-5 max-w-xs mx-auto">
+              Sign in to continue reading and save your progress across all your devices.
+            </p>
+            <Link
+              href={`/login?redirect=/read/${chapterId}`}
+              className="inline-block bg-primary text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-primary/90 transition shadow-md hover:shadow-lg"
+            >
+              Sign In to Continue
+            </Link>
+            <p className="text-xs text-foreground/40 mt-3">
+              New here? You can create a free account in seconds.
+            </p>
+          </div>
+        )}
+
+        {/* 付费墙卡片（付费作品） */}
+        {showPaywall && !hasSubscription && !isFreeBook && currentUser && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
             <h3 className="text-xl font-serif text-foreground mb-2">Loved this story?</h3>
@@ -355,7 +403,11 @@ export default function ReadPage() {
           onClick={() => {
             if (currentLastOrder < maxOrder) {
               const next = allChapters.find((ch: any) => ch.order_num === currentLastOrder + 1)
-              if (next && next.order_num > freeChapters && !hasSubscription) {
+              if (!currentUser && next && next.order_num > FREE_PREVIEW_CHAPTERS) {
+                setShowLoginPrompt(true)
+                return
+              }
+              if (next && next.order_num > freeChapters && !hasSubscription && currentUser) {
                 router.push('/pricing')
               } else {
                 goToChapter(currentLastOrder + 1)
@@ -382,12 +434,19 @@ export default function ReadPage() {
                 const isFree = ch.order_num <= freeChapters
                 const isCurrent = ch.id === chapterId
                 const canAccess = canAccessChapter(ch)
+                // 未登录用户超过前 3 章的显示为需要登录
+                const requiresLogin = !currentUser && ch.order_num > FREE_PREVIEW_CHAPTERS
                 return (
                   <div
                     key={ch.id}
                     onClick={() => {
-                      if (canAccess) goToChapter(ch.order_num)
-                      else router.push('/pricing')
+                      if (canAccess) {
+                        goToChapter(ch.order_num)
+                      } else if (requiresLogin) {
+                        router.push(`/login?redirect=/read/${ch.id}`)
+                      } else {
+                        router.push('/pricing')
+                      }
                     }}
                     className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
                       isCurrent ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent/30'
@@ -396,7 +455,9 @@ export default function ReadPage() {
                     <span className="text-sm truncate">
                       {formatChapterTitle(ch.order_num, ch.title)}
                     </span>
-                    {!isFree && !hasSubscription ? (
+                    {requiresLogin ? (
+                      <span className="text-blue-500 text-xs flex-shrink-0 ml-2">Sign in</span>
+                    ) : !isFree && !hasSubscription ? (
                       <span className="text-gray-400 text-sm flex-shrink-0 ml-2">🔒</span>
                     ) : null}
                   </div>
