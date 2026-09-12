@@ -36,7 +36,6 @@ export default function ReadPage() {
   const [fontSize, setFontSize] = useState(18)
   const [bgMode, setBgMode] = useState<keyof typeof BG_STYLES>('warm')
   const [hasSubscription, setHasSubscription] = useState(false)
-  const [isLastFreeChapter, setIsLastFreeChapter] = useState(false)
   const [showTOC, setShowTOC] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [nextOrderNum, setNextOrderNum] = useState<number | null>(null)
@@ -47,20 +46,20 @@ export default function ReadPage() {
 
   // 防复制/右键
   useEffect(() => {
-    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
-    const handleCopy = (e: ClipboardEvent) => e.preventDefault();
-    const handleSelectStart = (e: Event) => e.preventDefault();
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault()
+    const handleCopy = (e: ClipboardEvent) => e.preventDefault()
+    const handleSelectStart = (e: Event) => e.preventDefault()
 
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('copy', handleCopy);
-    document.addEventListener('selectstart', handleSelectStart);
+    document.addEventListener('contextmenu', handleContextMenu)
+    document.addEventListener('copy', handleCopy)
+    document.addEventListener('selectstart', handleSelectStart)
 
     return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('copy', handleCopy);
-      document.removeEventListener('selectstart', handleSelectStart);
-    };
-  }, []);
+      document.removeEventListener('contextmenu', handleContextMenu)
+      document.removeEventListener('copy', handleCopy)
+      document.removeEventListener('selectstart', handleSelectStart)
+    }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -90,10 +89,6 @@ export default function ReadPage() {
 
       if (chaptersList && isMounted) {
         setAllChapters(chaptersList)
-        const lastFree = chaptersList.filter((ch: any) => ch.order_num <= free).pop()
-        if (lastFree && lastFree.id === chapterId) {
-          setIsLastFreeChapter(true)
-        }
       }
 
       const { data: { session } } = await supabase.auth.getSession()
@@ -242,6 +237,14 @@ export default function ReadPage() {
   if (!canRead) return null
 
   const currentLastOrder = loadedChapters.length > 0 ? loadedChapters[loadedChapters.length - 1].order_num : chapter.order_num
+  const maxOrder = allChapters.length > 0 ? Math.max(...allChapters.map((ch: any) => ch.order_num)) : 0
+
+  // 判断是否为免费作品
+  const isFreeBook = freeChapters >= 999
+  // 是否为最后一章
+  const isLastChapter = currentLastOrder === maxOrder
+  // 免费作品读完后的引导卡片
+  const showFreeEndCard = isFreeBook && isLastChapter && !hasSubscription
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${BG_STYLES[bgMode]}`}>
@@ -259,7 +262,6 @@ export default function ReadPage() {
           <span className="text-xl font-['Jost'] font-black text-primary tracking-wide">IvyNovel</span>
         </Link>
 
-        {/* 右侧功能按钮 */}
         <div className="flex gap-2 items-center text-sm">
           <button onClick={() => setShowTOC(true)} className="text-sm hover:text-primary transition">
             ☰ Chapters
@@ -301,8 +303,8 @@ export default function ReadPage() {
           <div className="mt-8 text-center text-foreground/40 text-sm">Loading next chapter...</div>
         )}
 
-        {/* 付费墙卡片 */}
-        {showPaywall && !hasSubscription && (
+        {/* 付费作品的付费墙卡片 */}
+        {showPaywall && !hasSubscription && !isFreeBook && (
           <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#FFF5F5] to-[#FFEBEE] border border-pink-200 shadow-lg text-center">
             <div className="text-3xl mb-3">🌹</div>
             <h3 className="text-xl font-serif text-foreground mb-2">Loved this story?</h3>
@@ -315,6 +317,26 @@ export default function ReadPage() {
             >
               Subscribe Now
             </Link>
+          </div>
+        )}
+
+        {/* 免费作品读完后的温和引导卡片 */}
+        {showFreeEndCard && (
+          <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-[#F5F0FF] to-[#EBE0FF] border border-purple-200 shadow-lg text-center">
+            <div className="text-3xl mb-3">📚</div>
+            <h3 className="text-xl font-serif text-foreground mb-2">Enjoyed this story?</h3>
+            <p className="text-foreground/60 text-sm mb-5 max-w-xs mx-auto">
+              Unlock 50+ more romance novels with a membership.
+            </p>
+            <Link
+              href="/pricing"
+              className="inline-block bg-primary text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-primary/90 transition shadow-md hover:shadow-lg"
+            >
+              Explore Membership
+            </Link>
+            <p className="text-xs text-foreground/40 mt-3">
+              Or <Link href="/search?q=Free" className="text-primary hover:underline">browse more free stories</Link>.
+            </p>
           </div>
         )}
       </article>
@@ -331,7 +353,6 @@ export default function ReadPage() {
         <span className="text-xs text-foreground/50">Ch. {currentLastOrder}</span>
         <button
           onClick={() => {
-            const maxOrder = Math.max(...allChapters.map((ch: any) => ch.order_num))
             if (currentLastOrder < maxOrder) {
               const next = allChapters.find((ch: any) => ch.order_num === currentLastOrder + 1)
               if (next && next.order_num > freeChapters && !hasSubscription) {
