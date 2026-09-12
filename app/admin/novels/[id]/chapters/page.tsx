@@ -87,7 +87,7 @@ export default function ChapterListPage() {
   return (
     <main className="min-h-screen bg-background pt-24 pb-16 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>
             <Link href="/admin/novels" className="text-sm text-primary hover:underline">
               ← Back to Novels
@@ -99,6 +99,12 @@ export default function ChapterListPage() {
               {chapters.length} chapters · {novel?.free_chapters >= 999 ? 'Free novel' : `${novel?.free_chapters || 3} free`}
             </p>
           </div>
+          <Link
+            href={`/admin/novels/${novelId}/replace`}
+            className="px-5 py-2 bg-red-600 text-white rounded-full text-sm hover:bg-red-700 transition"
+          >
+            🔄 Replace All Chapters
+          </Link>
         </div>
 
         {loading ? (
