@@ -152,7 +152,6 @@ export default function AdminNovelsPage() {
   }
 
   const toggleStatus = async (novel: any) => {
-    // 对 restricted 状态不做切换，只切换 published / draft
     let newStatus = novel.status
     if (novel.status === 'published') {
       newStatus = 'draft'
@@ -223,7 +222,7 @@ export default function AdminNovelsPage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-serif text-primary">📋 Manage Novels</h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-foreground/60">Total: {totalCount} published / restricted</span>
+            <span className="text-sm text-foreground/60">Total: {totalCount}</span>
             <Link href="/admin/add-novel" className="px-5 py-2 bg-primary text-background rounded-full text-sm hover:bg-primary/90 transition">
               + Add New Novel
             </Link>
@@ -274,9 +273,31 @@ export default function AdminNovelsPage() {
                   <option value="draft">Draft</option>
                 </select>
               </div>
+              <div className="flex items-center gap-3 p-3 bg-accent/30 rounded-lg md:col-span-2">
+                <input
+                  type="checkbox"
+                  id="editIsFree"
+                  checked={editForm.free_chapters >= 999}
+                  onChange={(e) => {
+                    const isFree = e.target.checked
+                    setEditForm({ ...editForm, free_chapters: isFree ? 999 : 3 })
+                  }}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="editIsFree" className="text-sm text-foreground/80">
+                  Make this entire novel free (all chapters free to read)
+                </label>
+              </div>
               <div>
                 <label className="block text-sm text-foreground/60 mb-1">Free Chapters</label>
-                <input type="number" min="0" value={editForm.free_chapters} onChange={(e) => setEditForm({ ...editForm, free_chapters: e.target.value })} className="w-full p-2 rounded bg-background border border-border text-foreground" />
+                <input
+                  type="number"
+                  min="0"
+                  value={editForm.free_chapters}
+                  onChange={(e) => setEditForm({ ...editForm, free_chapters: e.target.value })}
+                  className="w-full p-2 rounded bg-background border border-border text-foreground"
+                  disabled={editForm.free_chapters >= 999}
+                />
               </div>
             </div>
             <div className="flex gap-3 mt-4">
@@ -305,48 +326,56 @@ export default function AdminNovelsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {novels.map((novel: any) => (
-                    <tr key={novel.id} className="border-b border-border/50 hover:bg-accent/20">
-                      <td className="p-3">
-                        {novel.cover_url ? (
-                          <img src={novel.cover_url} alt="" className="w-10 h-14 object-cover rounded" />
-                        ) : (
-                          <div className="w-10 h-14 bg-accent rounded" />
-                        )}
-                      </td>
-                      <td className="p-3 font-medium">{novel.title}</td>
-                      <td className="p-3 text-foreground/60">{novel.author}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 text-xs rounded-full ${novel.status === 'published' ? 'bg-green-100 text-green-700' : novel.status === 'restricted' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                          {novel.status}
-                        </span>
-                      </td>
-                      <td className="p-3">{novel.free_chapters || 3}</td>
-                      <td className="p-3">
-                        <div className="flex gap-2 flex-wrap">
-                          <button onClick={() => startEdit(novel)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition">Edit</button>
-                          {novel.status !== 'restricted' && (
-                            <button
-                              onClick={() => toggleStatus(novel)}
-                              className={`text-xs px-3 py-1 rounded-full transition ${
-                                novel.status === 'published'
-                                  ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
-                              }`}
-                            >
-                              {novel.status === 'published' ? '下架' : '上架'}
-                            </button>
+                  {novels.map((novel: any) => {
+                    const isFreeBook = novel.free_chapters >= 999
+                    return (
+                      <tr key={novel.id} className="border-b border-border/50 hover:bg-accent/20">
+                        <td className="p-3">
+                          {novel.cover_url ? (
+                            <img src={novel.cover_url} alt="" className="w-10 h-14 object-cover rounded" />
+                          ) : (
+                            <div className="w-10 h-14 bg-accent rounded" />
                           )}
-                          <button onClick={() => deleteNovel(novel.id, novel.title)} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full hover:bg-red-200 transition">Delete</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="p-3 font-medium">{novel.title}</td>
+                        <td className="p-3 text-foreground/60">{novel.author}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 text-xs rounded-full ${novel.status === 'published' ? 'bg-green-100 text-green-700' : novel.status === 'restricted' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                            {novel.status}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          {isFreeBook ? (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Free</span>
+                          ) : (
+                            novel.free_chapters || 3
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex gap-2 flex-wrap">
+                            <button onClick={() => startEdit(novel)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full hover:bg-primary/30 transition">Edit</button>
+                            {novel.status !== 'restricted' && (
+                              <button
+                                onClick={() => toggleStatus(novel)}
+                                className={`text-xs px-3 py-1 rounded-full transition ${
+                                  novel.status === 'published'
+                                    ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                                    : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                }`}
+                              >
+                                {novel.status === 'published' ? '下架' : '上架'}
+                              </button>
+                            )}
+                            <button onClick={() => deleteNovel(novel.id, novel.title)} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full hover:bg-red-200 transition">Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* 分页控件 */}
             <div className="flex justify-center items-center gap-4 mt-6">
               <button
                 onClick={() => fetchNovels(currentPage - 1)}
