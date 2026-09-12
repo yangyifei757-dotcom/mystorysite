@@ -13,7 +13,8 @@ export default function AddNovelPage() {
     tags: 'Romance',
     content: '',
     payAfterChapter: '3',
-    status: 'published', // 新增状态字段
+    status: 'published',
+    isFree: false, // 新增：全部免费
   })
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
@@ -21,6 +22,11 @@ export default function AddNovelPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  const handleFreeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isFree = e.target.checked
+    setForm({ ...form, isFree, payAfterChapter: isFree ? '999' : '3' })
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,7 +82,7 @@ export default function AddNovelPage() {
           tags: form.tags,
           content: form.content,
           payAfterChapter: parseInt(form.payAfterChapter) || 3,
-          status: form.status, // 传递状态
+          status: form.status,
           password: adminPassword,
         }),
       })
@@ -116,7 +122,7 @@ export default function AddNovelPage() {
               <option value="Werewolf">Werewolf</option>
               <option value="Steamy">Steamy</option>
               <option value="Urban">Urban</option>
-              <option value="Mature">Mature</option> {/* 新增标签选项 */}
+              <option value="Mature">Mature</option>
             </select>
           </div>
           <div>
@@ -127,13 +133,28 @@ export default function AddNovelPage() {
               <option value="draft">Draft</option>
             </select>
           </div>
+          <div className="flex items-center gap-3 p-3 bg-accent/30 rounded-lg">
+            <input
+              type="checkbox"
+              id="isFree"
+              checked={form.isFree}
+              onChange={handleFreeChange}
+              className="w-4 h-4"
+            />
+            <label htmlFor="isFree" className="text-sm text-foreground/80">
+              Make this entire novel free (all chapters free to read)
+            </label>
+          </div>
           <div>
             <label className="block text-sm mb-1 text-foreground/70">Full Novel Text *</label>
             <textarea name="content" placeholder="Paste entire book content. Chapters should start with 'Chapter 1', 'Chapter 2', etc." value={form.content} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground font-mono text-sm" rows={20} required />
           </div>
           <div>
             <label className="block text-sm mb-1 text-foreground/70">Paywall starts after chapter # (free chapters)</label>
-            <input name="payAfterChapter" type="number" min="0" value={form.payAfterChapter} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" />
+            <input name="payAfterChapter" type="number" min="0" value={form.payAfterChapter} onChange={handleChange} className="w-full p-3 rounded bg-background border border-border text-foreground" disabled={form.isFree} />
+            <p className="text-xs text-foreground/40 mt-1">
+              {form.isFree ? 'All chapters free.' : 'Chapters after this number are locked for subscribers.'}
+            </p>
           </div>
           <button type="submit" disabled={loading} className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:bg-primary/90 disabled:opacity-50">
             {loading ? 'Uploading...' : 'Upload Novel'}
