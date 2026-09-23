@@ -32,23 +32,34 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Analytics />
         {/* 注册 Service Worker，updateViaCache: 'none' 确保每次获取最新 sw.js，并定时检查更新 */}
         <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
-                    .then((reg) => {
-                      // 每 60 秒检查一次 Service Worker 更新
-                      setInterval(() => reg.update(), 60000)
-                    })
-                    .catch((err) => {
-                      console.error('Service Worker registration failed:', err)
-                    })
+  dangerouslySetInnerHTML={{
+    __html: `
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+            .then((reg) => {
+              // 每 60 秒检查一次更新
+              setInterval(() => reg.update(), 60000)
+
+              // 当新 SW 接管时，自动刷新页面
+              reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                    // 新版本已激活，刷新页面
+                    window.location.reload()
+                  }
                 })
-              }
-            `,
-          }}
-        />
+              })
+            })
+            .catch((err) => {
+              console.error('Service Worker registration failed:', err)
+            })
+        })
+      }
+    `,
+  }}
+/>
       </body>
     </html>
   )
