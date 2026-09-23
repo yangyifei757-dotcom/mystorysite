@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ivynovel-v4' // 版本号更新，强制所有 PWA 刷新
+const CACHE_NAME = 'ivynovel-v5'
 
 const urlsToCache = [
   '/favicon.ico',
@@ -6,7 +6,7 @@ const urlsToCache = [
   '/manifest.json',
 ]
 
-// 安装：立即激活新 SW
+// 安装：立即激活
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
@@ -28,11 +28,11 @@ self.addEventListener('activate', (event) => {
   self.clients.claim()
 })
 
-// 网络优先，只缓存静态资源，绝不缓存 HTML 和 API
+// 网络优先，只缓存静态资源
 self.addEventListener('fetch', (event) => {
   const url = event.request.url
 
-  // 不缓存 API、Supabase、Stripe、Creem 等请求
+  // 不拦截 API、Supabase、支付等请求
   if (
     event.request.method !== 'GET' ||
     url.includes('/api/') ||
@@ -40,10 +40,10 @@ self.addEventListener('fetch', (event) => {
     url.includes('stripe.com') ||
     url.includes('creem.io')
   ) {
-    return // 直接走网络，不拦截
+    return
   }
 
-  // 只缓存 _next/static 下的 JS/CSS
+  // 只缓存 _next/static 下的静态资源
   if (url.includes('/_next/static/')) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
@@ -60,8 +60,16 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // 其他请求（HTML、页面）走网络优先，失败才回退缓存
+  // 其他请求（HTML、页面）：网络优先，失败时回退到缓存的首页
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request).catch(() => {
+      return caches.match(event.request).then((cached) => {
+        // 如果请求的是页面，回退到缓存首页
+        if (event.request.mode === 'navigate') {
+          return caches.match('/') || fetch(event.request)
+        }
+        return cached
+      })
+    })
   )
 })
