@@ -30,14 +30,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} ${playfair.variable} font-sans bg-background text-foreground antialiased`}>
         {children}
         <Analytics />
-        {/* 注册 Service Worker，updateViaCache: 'none' 确保每次获取最新 sw.js */}
+        {/* 注册 Service Worker，updateViaCache: 'none' 确保每次获取最新 sw.js，并定时检查更新 */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
-                });
+                  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+                    .then((reg) => {
+                      // 每 60 秒检查一次 Service Worker 更新
+                      setInterval(() => reg.update(), 60000)
+                    })
+                    .catch((err) => {
+                      console.error('Service Worker registration failed:', err)
+                    })
+                })
               }
             `,
           }}
